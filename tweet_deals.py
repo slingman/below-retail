@@ -23,7 +23,13 @@ with open("deals.json", "r") as f:
 # Pick a random deal to tweet
 if deals:
     deal = random.choice(deals)
-    tweet_text = f"🔥 {deal['name']} - {deal['price']}! Grab it here: {deal['link']} #SneakerDeals"
+
+    # ✅ Fix URL formatting issue
+    link = deal["link"]
+    if not link.startswith("http"):
+        link = "https://www.nike.com" + link  # Change "nike.com" dynamically based on retailer
+
+    tweet_text = f"🔥 {deal['name']} - {deal['price']}! Grab it here: {link} #SneakerDeals"
 
     # Post the tweet
     client.create_tweet(text=tweet_text)
