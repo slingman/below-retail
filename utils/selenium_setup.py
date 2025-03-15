@@ -10,16 +10,10 @@ def get_selenium_driver():
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--window-size=1920x1080")
-    
-chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_experimental_option("excludeSwitches", 
-["enable-automation"])
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option("useAutomationExtension", False)
 
-    driver = 
-webdriver.Chrome(service=Service(ChromeDriverManager().install()), 
-options=chrome_options)
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', 
-{get: () => undefined})")
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
-
