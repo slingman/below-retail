@@ -75,6 +75,9 @@ def scrape_deals(category, urls):
             driver.get(site)
             time.sleep(random.uniform(5, 10))  # Let JavaScript load
 
+            # DEBUG: Print full page source for analysis
+            print("\n🔍 FULL PAGE SOURCE (First 1000 chars):\n", driver.page_source[:1000])
+
             # Scroll to load more items (simulating user behavior)
             for _ in range(3):
                 driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
@@ -85,8 +88,10 @@ def scrape_deals(category, urls):
             soup = BeautifulSoup(page_source, "html.parser")
 
             # ✅ Extract Deals
-            for deal in soup.find_all("div", class_="product-card"):
+            for deal in soup.find_all("div", class_="product-card"):  # Might need adjustment
                 try:
+                    print("\n🔍 Full Product Card HTML:\n", deal.prettify())  # Debugging step
+
                     name_elem = deal.find("div", class_="product-card__title")
                     name = name_elem.text.strip() if name_elem else "Unknown Product"
 
