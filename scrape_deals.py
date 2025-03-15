@@ -36,12 +36,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/537.36",
 ]
 
-# ✅ Proxy Settings (Use Tor or a Proxy Service)
-PROXIES = {
-    "http": "socks5h://127.0.0.1:9050",
-    "https": "socks5h://127.0.0.1:9050",
-}
-
 # ✅ Setup Selenium for JavaScript-heavy Sites
 chrome_options = Options()
 chrome_options.add_argument("--headless")  # Run in the background
@@ -69,7 +63,7 @@ for site in SITES:
 
         # ✅ Retry Mechanism to Fix 400 Errors
         for _ in range(3):  # Retry up to 3 times
-            response = requests.get(site, headers=headers, proxies=PROXIES)
+            response = requests.get(site, headers=headers)
             if response.status_code == 200:
                 break  # Exit loop if successful
             print(f"⚠️ Retrying {site} (Status Code: {response.status_code})")
