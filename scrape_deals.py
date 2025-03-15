@@ -87,32 +87,44 @@ def scrape_deals(category, urls):
             else:
                 soup = BeautifulSoup(response.text, "html.parser")
 
-            # ✅ Extract Deals (Updated to Capture Sale & Regular Price)
+            # ✅ Extract Promo Codes
+            promo_code = "N/A"
+            for promo_class in ["promo-banner", "coupon-code", "promo-text"]:
+                promo_elem = soup.find("div", class_=promo_class)
+                if promo_elem:
+                    promo_code = promo_elem.text.strip().upper()
+                    break  
+
+            # ✅ Extract Deals (Including Sale & Regular Price)
             for deal in soup.find_all("div", class_="product-card"):
                 try:
                     name = deal.find("div", class_="product-card__title").text.strip()
                     
-                    # ✅ Extract sale price from different possible elements
+                    # ✅ Extract sale price from multiple possible elements
                     sale_price = "N/A"
-                    for sale_class in ["sale-price", "discount-price", "current-price"]:
+                    for sale_class in ["sale-price", "discount-price", "current-price", "price-sale"]:
                         sale_price_elem = deal.find("div", class_=sale_class)
                         if sale_price_elem:
                             sale_price = sale_price_elem.text.strip()
-                            break  # Stop searching once found
+                            print(f"🔍 Found Sale Price: {sale_price}")  # Debugging output
+                            break  
 
-                    # ✅ Extract regular price from different possible elements
+                    # ✅ Extract regular price from multiple possible elements
                     regular_price = "N/A"
-                    for reg_class in ["regular-price", "original-price", "was-price"]:
+                    for reg_class in ["regular-price", "original-price", "was-price", "price-original"]:
                         regular_price_elem = deal.find("div", class_=reg_class)
                         if regular_price_elem:
                             regular_price = regular_price_elem.text.strip()
-                            break  # Stop searching once found
+                            print(f"🔍 Found Regular Price: {regular_price}")  # Debugging output
+                            break  
 
                     # ✅ If only one price is found, assume it's the sale price
-                    if regular_price == "N/A":
+                    if regular_price == "N/A" and sale_price != "N/A":
                         regular_price = sale_price
-                    elif sale_price == "N/A":
-                        sale_price = regular_price  # No discount, single price displayed
+                    elif sale_price == "N/A" and regular_price != "N/A":
+                        sale_price = regular_price  
+
+                    print(f"✅ Final Prices - Regular: {regular_price}, Sale: {sale_price}")
 
                     # ✅ Extract product link
                     link = "https://www.nike.com" + deal.find("a")["href"]
@@ -124,11 +136,13 @@ def scrape_deals(category, urls):
                         "name": name,
                         "regular_price": regular_price,
                         "sale_price": sale_price,
+                        "promo_code": promo_code if promo_code != "N/A" else None,  # Include only if valid
                         "link": link,
                         "image": image,
                         "category": category
                     })
-                except:
+                except Exception as e:
+                    print(f"⚠️ Skipping product due to error: {e}")
                     continue
 
         except requests.exceptions.RequestException as e:
