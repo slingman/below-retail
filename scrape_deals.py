@@ -17,7 +17,10 @@ headers = {
 deals = []
 
 for site in SITES:
-    response = requests.get(site, headers=headers)
+    session = requests.Session()
+    session.headers.update(headers)
+    response = session.get(site)
+
     if response.status_code != 200:
         print(f"❌ Failed to fetch {site} (Status Code: {response.status_code})")
         continue
