@@ -8,11 +8,9 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 
-# ✅ Updated Sneaker Sale Sources
+# ✅ Sneaker Sale Sources
 SITES = [
     "https://www.nike.com/w/sale-shoes",
     "https://www.adidas.com/us/sale",
@@ -29,13 +27,17 @@ USER_AGENTS = [
 
 # ✅ Setup Selenium
 chrome_options = Options()
-chrome_options.add_argument("--headless")
+chrome_options.add_argument("--headless=new")  # Uses new headless mode
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--window-size=1920x1080")
-chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # New line to bypass bot detection
+chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+chrome_options.add_experimental_option("useAutomationExtension", False)
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
 deals = []
 
 for site in SITES:
@@ -48,29 +50,28 @@ for site in SITES:
         "DNT": "1",
         "Upgrade-Insecure-Requests": "1",
         "Connection": "keep-alive",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
     }
 
-    USE_SELENIUM = any(keyword in site for keyword in ["nike", "adidas", "footlocker"])
+    print(f"⚠️ {site} is known for blocking bots, using Selenium first...")
+    driver.get(site)
+    time.sleep(random.uniform(10, 15))
 
-    if USE_SELENIUM:
-        print(f"⚠️ {site} is known for blocking bots, using Selenium first...")
-        driver.get(site)
-        time.sleep(random.uniform(10, 15))  # Increased wait for JavaScript
+    # Fake keyboard presses
+    actions = webdriver.ActionChains(driver)
+    actions.send_keys(Keys.TAB).perform()
+    time.sleep(random.uniform(1, 3))
 
-        # Scroll down to load more products
-        for _ in range(3):  
-            driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
-            time.sleep(3)
+    # Scroll slowly like a human
+    scroll_pause_time = random.uniform(2, 4)
+    for _ in range(3):
+        driver.execute_script("window.scrollBy(0, window.innerHeight * 0.5);")
+        time.sleep(scroll_pause_time)
 
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
-        page_source = driver.page_source
-        soup = BeautifulSoup(page_source, "html.parser")
-
-    else:
-        response = requests.get(site, headers=headers)
-        soup = BeautifulSoup(response.text, "html.parser")
+    # Get page data
+    page_source = driver.page_source
+    soup = BeautifulSoup(page_source, "html.parser")
 
 # ✅ Close Selenium WebDriver
 driver.quit()
