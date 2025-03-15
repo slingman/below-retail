@@ -75,9 +75,6 @@ def scrape_deals(category, urls):
             driver.get(site)
             time.sleep(random.uniform(5, 10))  # Let JavaScript load
 
-            # DEBUG: Print full page source for analysis
-            print("\n🔍 FULL PAGE SOURCE (First 1000 chars):\n", driver.page_source[:1000])
-
             # Scroll to load more items (simulating user behavior)
             for _ in range(3):
                 driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
@@ -88,19 +85,20 @@ def scrape_deals(category, urls):
             soup = BeautifulSoup(page_source, "html.parser")
 
             # ✅ Extract Deals
-            for deal in soup.find_all("div", class_="product-card"):  # Might need adjustment
+            for deal in soup.find_all("div", class_="product-card"):
                 try:
                     print("\n🔍 Full Product Card HTML:\n", deal.prettify())  # Debugging step
 
+                    # ✅ Extract Product Name
                     name_elem = deal.find("div", class_="product-card__title")
                     name = name_elem.text.strip() if name_elem else "Unknown Product"
 
-                    # ✅ Extract sale price
-                    sale_price_elem = deal.find("div", class_="product-price is--current-price")
+                    # ✅ Extract Sale Price
+                    sale_price_elem = deal.find("div", {"data-testid": "product-price-reduced"})
                     sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "") if sale_price_elem else "N/A"
 
-                    # ✅ Extract regular price
-                    regular_price_elem = deal.find("div", class_="product-price us__styling is--striked-out")
+                    # ✅ Extract Regular Price
+                    regular_price_elem = deal.find("div", {"data-testid": "product-price"})
                     regular_price = regular_price_elem.text.strip().replace("$", "").replace(",", "") if regular_price_elem else sale_price
 
                     # Convert to float for comparison
@@ -113,11 +111,11 @@ def scrape_deals(category, urls):
                     if sale_price is None:
                         continue  # Skip if no price available
 
-                    # ✅ Extract product link
+                    # ✅ Extract Product Link
                     link_elem = deal.find("a", class_="product-card__link-overlay")
                     link = link_elem["href"] if link_elem else "#"
 
-                    # ✅ Extract product image
+                    # ✅ Extract Product Image
                     image_elem = deal.find("img", class_="product-card__hero-image")
                     image = image_elem["src"] if image_elem else ""
 
