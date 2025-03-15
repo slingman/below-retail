@@ -41,7 +41,7 @@ def is_good_deal(deal):
         regular_price = float(regular_price)
         sale_price = float(sale_price)
         discount = ((regular_price - sale_price) / regular_price) * 100
-        return discount >= 30  # ✅ Only tweet deals that are 30%+ off
+        return discount >= 10  # ✅ Only tweet deals that are 10%+ off
     except:
         return False
 
