@@ -1,7 +1,12 @@
 import time
 import requests
-from bs4 import BeautifulSoup
+import random
 import json
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 
 # ✅ Updated Sneaker Sale Sources (Fixed 404s & Removed Dead Links)
 SITES = [
@@ -23,37 +28,62 @@ SITES = [
     "https://www.amazon.com/s?k=sneakers+sale"
 ]
 
-# ✅ Improved Headers to Prevent 403 Blocks
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.google.com",
-    "DNT": "1",  # Do Not Track
-    "Upgrade-Insecure-Requests": "1",
-    "Connection": "keep-alive"
+# ✅ Rotating User-Agents to Avoid Blocking
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/537.36",
+]
+
+# ✅ Proxy Settings (Use Tor or a Proxy Service)
+PROXIES = {
+    "http": "socks5h://127.0.0.1:9050",
+    "https": "socks5h://127.0.0.1:9050",
 }
 
+# ✅ Setup Selenium for JavaScript-heavy Sites
+chrome_options = Options()
+chrome_options.add_argument("--headless")  # Run in the background
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--window-size=1920x1080")
+
+# ✅ Automatically install & setup ChromeDriver
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
 deals = []
-session = requests.Session()
-session.headers.update(headers)
 
 for site in SITES:
     print(f"🔍 Scraping {site} - Checking structure...")
 
     try:
+        headers = {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com",
+            "DNT": "1",
+            "Upgrade-Insecure-Requests": "1",
+            "Connection": "keep-alive"
+        }
+
         # ✅ Retry Mechanism to Fix 400 Errors
         for _ in range(3):  # Retry up to 3 times
-            response = session.get(site)
+            response = requests.get(site, headers=headers, proxies=PROXIES)
             if response.status_code == 200:
                 break  # Exit loop if successful
             print(f"⚠️ Retrying {site} (Status Code: {response.status_code})")
-            time.sleep(3)  # Wait before retrying
+            time.sleep(random.uniform(5, 15))  # Random delay to prevent blocking
 
-        if response.status_code != 200:
-            print(f"❌ Failed to fetch {site} (Status Code: {response.status_code})")
-            continue
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        # ✅ If the site uses JavaScript, use Selenium
+        if response.status_code == 403 or "javascript" in response.text.lower():
+            print(f"⚠️ {site} requires JavaScript, switching to Selenium...")
+            driver.get(site)
+            time.sleep(5)  # Wait for JavaScript to load
+            page_source = driver.page_source
+            soup = BeautifulSoup(page_source, "html.parser")
+        else:
+            soup = BeautifulSoup(response.text, "html.parser")
 
         # ✅ Fixed Selectors for Sneaker Deal Extraction
 
@@ -84,27 +114,12 @@ for site in SITES:
                 if image.startswith("data:image"): image = ""
                 deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
 
-        elif "newbalance" in site:
-            for deal in soup.find_all("div", class_="product-card"):
-                name = deal.find("a", class_="product-name").text.strip()
-                price = deal.find("span", class_="product-price").text.strip()
-                link = "https://www.newbalance.com" + deal.find("a")["href"]
-                image = deal.find("img")["src"] if deal.find("img") else ""
-                if image.startswith("data:image"): image = ""
-                deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
-
-        elif "asics" in site:
-            for deal in soup.find_all("div", class_="product-tile"):
-                name = deal.find("a", class_="name-link").text.strip()
-                price = deal.find("span", class_="sales").text.strip()
-                link = "https://www.asics.com" + deal.find("a")["href"]
-                image = deal.find("img")["src"] if deal.find("img") else ""
-                if image.startswith("data:image"): image = ""
-                deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
-
     except requests.exceptions.RequestException as e:
         print(f"❌ Error fetching {site}: {e}")
         continue
+
+# ✅ Close Selenium WebDriver
+driver.quit()
 
 # ✅ Only save deals that have a valid image URL
 valid_deals = [deal for deal in deals if deal["image"].startswith("http")]
