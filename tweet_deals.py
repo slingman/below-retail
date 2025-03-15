@@ -49,7 +49,7 @@ def is_good_deal(deal):
 filtered_deals = [deal for deal in deals if is_good_deal(deal)]
 
 if not filtered_deals:
-    print("❌ No good deals (30%+ off) to tweet.")
+    print("❌ No good deals (10%+ off) to tweet.")
     exit()
 
 # ✅ Select a random deal from the filtered ones
