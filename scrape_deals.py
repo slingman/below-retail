@@ -1,7 +1,6 @@
 import time
-import requests
-import random
 import json
+import random
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -34,9 +33,9 @@ SITES = {
     ]
 }
 
-# ✅ Setup Selenium for JavaScript-heavy Sites
+# ✅ Setup Selenium for JavaScript-rendered Sites
 chrome_options = Options()
-chrome_options.add_argument("--headless=new")
+chrome_options.add_argument("--headless=new")  # Run in headless mode
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--window-size=1920x1080")
@@ -49,57 +48,35 @@ driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () =>
 
 deals = []
 
-# ✅ Scraping Function
+# ✅ Scraping Function (Now Uses Selenium First)
 def scrape_deals(category, urls):
     global deals
-    print(f"🔍 Scraping {category.upper()} Deals...")
-    
-    for site in urls:
-        print(f"🔍 Checking {site}")
+    print(f"🔍 Scraping {category.upper()} Deals with Selenium...")
 
-        headers = {
-            "User-Agent": random.choice([
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36",
-            ]),
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://www.google.com",
-            "Connection": "keep-alive"
-        }
+    for site in urls:
+        print(f"🔍 Accessing {site} with Selenium...")
 
         try:
-            response = requests.get(site, headers=headers, timeout=10)
-            
-            # If the site blocks normal requests, use Selenium
-            if response.status_code == 403 or "javascript" in response.text.lower():
-                print(f"⚠️ {site} requires JavaScript, switching to Selenium...")
-                driver.get(site)
-                time.sleep(random.uniform(5, 10))  # Let JavaScript load
+            driver.get(site)
+            time.sleep(random.uniform(5, 10))  # Let JavaScript load
 
-                # Scroll to load more items
-                for _ in range(3):
-                    driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
-                    time.sleep(random.uniform(2, 4))
+            # Scroll to load more items (simulating user behavior)
+            for _ in range(3):
+                driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
+                time.sleep(random.uniform(2, 4))
 
-                page_source = driver.page_source
-                soup = BeautifulSoup(page_source, "html.parser")
-            else:
-                soup = BeautifulSoup(response.text, "html.parser")
+            # Get page source after JavaScript execution
+            page_source = driver.page_source
+            soup = BeautifulSoup(page_source, "html.parser")
 
-            # ✅ Extract Promo Codes
-            promo_code = "N/A"
-            for promo_class in ["promo-banner", "coupon-code", "promo-text"]:
-                promo_elem = soup.find("div", class_=promo_class)
-                if promo_elem:
-                    promo_code = promo_elem.text.strip().upper()
-                    break  
-
-            # ✅ Extract Deals (Including Sale & Regular Price)
+            # ✅ Extract Deals (Now Uses Selenium Only)
             for deal in soup.find_all("div", class_="product-card"):
                 try:
-                    name = deal.find("div", class_="product-card__title").text.strip()
-                    
+                    print("\n🔍 Full Product Card HTML:\n", deal.prettify())  # Debugging step
+
+                    name = deal.find("div", class_="product-card__title")
+                    name = name.text.strip() if name else "Unknown Product"
+
                     # ✅ Extract sale price from multiple possible elements
                     sale_price = "N/A"
                     for sale_class in ["sale-price", "discount-price", "current-price", "price-sale"]:
@@ -127,16 +104,17 @@ def scrape_deals(category, urls):
                     print(f"✅ Final Prices - Regular: {regular_price}, Sale: {sale_price}")
 
                     # ✅ Extract product link
-                    link = "https://www.nike.com" + deal.find("a")["href"]
+                    link_elem = deal.find("a")
+                    link = link_elem["href"] if link_elem else "#"
 
                     # ✅ Extract product image
-                    image = deal.find("img")["src"] if deal.find("img") else ""
+                    image_elem = deal.find("img")
+                    image = image_elem["src"] if image_elem else ""
 
                     deals.append({
                         "name": name,
                         "regular_price": regular_price,
                         "sale_price": sale_price,
-                        "promo_code": promo_code if promo_code != "N/A" else None,  # Include only if valid
                         "link": link,
                         "image": image,
                         "category": category
@@ -145,8 +123,8 @@ def scrape_deals(category, urls):
                     print(f"⚠️ Skipping product due to error: {e}")
                     continue
 
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Error fetching {site}: {e}")
+        except Exception as e:
+            print(f"❌ Error accessing {site}: {e}")
 
 # ✅ Loop through each category & scrape
 for category, urls in SITES.items():
