@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 
-# Updated list of sneaker deal websites
+# List of sneaker deal websites
 SITES = [
     "https://kicksdeals.com/",
     "https://sneakernews.com/release-dates/",
@@ -39,11 +39,7 @@ for site in SITES:
 
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Debug: Print first 1000 characters of page HTML
-        print(soup.prettify()[:1000])
-
         # Extract sneaker deals including images
-
         if "kicksdeals" in site:
             for deal in soup.find_all("div", class_="post-title"):
                 name = deal.text.strip()
@@ -74,21 +70,4 @@ for site in SITES:
                 image = deal.find("img")["src"] if deal.find("img") else ""
                 deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
 
-        elif "stockx" in site:
-            for deal in soup.find_all("div", class_="tile"):
-                name = deal.find("div", class_="tile-title").text.strip()
-                price = deal.find("div", class_="tile-price").text.strip() if deal.find("div", class_="tile-price") else "Check Site"
-                link = "https://stockx.com" + deal.find("a")["href"]
-                image = deal.find("img")["src"] if deal.find("img") else ""
-                deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
-
-        elif "nike" in site:
-            for deal in soup.find_all("div", class_="product-card"):
-                name = deal.find("div", class_="product-card__title").text.strip()
-                price = deal.find("div", class_="product-price").text.strip()
-                link = deal.find("a")["href"]
-                image = deal.find("img")["src"] if deal.find("img") else ""
-                deals.append({"name": name, "price": price, "link": "https://www.nike.com" + link, "image": image, "source": site})
-
-        elif "adidas" in site:
-            for deal in soup.find_all("div", cla
+        elif "sto
