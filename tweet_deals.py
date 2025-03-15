@@ -30,15 +30,20 @@ with open("deals.json", "r") as f:
 
 # ✅ Function to filter deals (only tweet if discount is 30%+)
 def is_good_deal(deal):
-    if "regular_price" in deal and "sale_price" in deal:
-        try:
-            regular_price = float(deal["regular_price"].replace("$", "").replace(",", ""))
-            sale_price = float(deal["sale_price"].replace("$", "").replace(",", ""))
-            discount = ((regular_price - sale_price) / regular_price) * 100
-            return discount >= 30  # ✅ Only tweet deals that are 30%+ off
-        except:
-            return False
-    return True  # ✅ If no discount info is available, assume it's a good deal
+    regular_price = deal.get("regular_price", "").replace("$", "").replace(",", "")
+    sale_price = deal.get("sale_price", "").replace("$", "").replace(",", "")
+
+    # ✅ Skip deals with missing price information
+    if not regular_price or not sale_price:
+        return False  
+
+    try:
+        regular_price = float(regular_price)
+        sale_price = float(sale_price)
+        discount = ((regular_price - sale_price) / regular_price) * 100
+        return discount >= 30  # ✅ Only tweet deals that are 30%+ off
+    except:
+        return False
 
 # ✅ Apply filter
 filtered_deals = [deal for deal in deals if is_good_deal(deal)]
@@ -49,6 +54,10 @@ if not filtered_deals:
 
 # ✅ Select a random deal from the filtered ones
 deal = random.choice(filtered_deals)
+
+# ✅ Handle missing sale price safely
+sale_price = deal.get("sale_price", "Unknown Price")
+regular_price = deal.get("regular_price", "Unknown Price")
 
 # ✅ Attach affiliate links based on store/category
 AFFILIATE_LINKS = {
@@ -69,7 +78,7 @@ for store in AFFILIATE_LINKS:
         deal_url = AFFILIATE_LINKS[store] + "&url=" + deal_url
 
 # ✅ Format the tweet
-tweet_text = f"🔥 {deal['name']} - {deal['sale_price']} (Reg: {deal['regular_price']})! Buy here: {deal_url} #Deals #Shopping"
+tweet_text = f"🔥 {deal['name']} - {sale_price} (Reg: {regular_price})! Buy here: {deal_url} #Deals #Shopping"
 
 # ✅ Check if the deal has a valid image
 image_url = deal.get("image", "")  
