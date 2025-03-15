@@ -1,6 +1,9 @@
 import tweepy
 import json
 import random
+import os
+import requests
+from urllib.parse import urlparse
 
 # ✅ Replace these with your new Twitter API credentials
 API_KEY = "LXNWeMaztoQ4xislo0zImh0nL"
