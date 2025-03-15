@@ -7,6 +7,10 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 
 # ✅ Updated Sneaker Sale Sources (Fixed 404s & Removed Dead Links)
 SITES = [
@@ -55,10 +59,12 @@ for site in SITES:
         headers = {
             "User-Agent": random.choice(USER_AGENTS),
             "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://www.google.com",
+            "Referer": f"https://www.google.com/search?q={random.randint(100000,999999)}",
             "DNT": "1",
             "Upgrade-Insecure-Requests": "1",
-            "Connection": "keep-alive"
+            "Connection": "keep-alive",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
         }
 
         # ✅ Retry Mechanism to Fix 400 Errors
@@ -67,13 +73,25 @@ for site in SITES:
             if response.status_code == 200:
                 break  # Exit loop if successful
             print(f"⚠️ Retrying {site} (Status Code: {response.status_code})")
-            time.sleep(random.uniform(5, 15))  # Random delay to prevent blocking
+            time.sleep(random.uniform(10, 25))  # Random delay to prevent blocking
 
         # ✅ If the site uses JavaScript, use Selenium
         if response.status_code == 403 or "javascript" in response.text.lower():
             print(f"⚠️ {site} requires JavaScript, switching to Selenium...")
+
             driver.get(site)
-            time.sleep(5)  # Wait for JavaScript to load
+            time.sleep(5)  # Initial wait
+
+            # Scroll down to load more products (for sites with infinite scroll)
+            for _ in range(3):  
+                driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
+                time.sleep(3)  # Wait for new products to load
+
+            # Wait for the product grid to be visible
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+
             page_source = driver.page_source
             soup = BeautifulSoup(page_source, "html.parser")
         else:
@@ -95,15 +113,6 @@ for site in SITES:
                 name = deal.find("span", class_="gl-product-card__name").text.strip()
                 price = deal.find("div", class_="gl-price-item").text.strip()
                 link = "https://www.adidas.com" + deal.find("a")["href"]
-                image = deal.find("img")["src"] if deal.find("img") else ""
-                if image.startswith("data:image"): image = ""
-                deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
-
-        elif "footlocker" in site:
-            for deal in soup.find_all("div", class_="fl-product-tile"):
-                name = deal.find("span", class_="ProductName-primary").text.strip()
-                price = deal.find("span", class_="ProductPrice").text.strip()
-                link = "https://www.footlocker.com" + deal.find("a")["href"]
                 image = deal.find("img")["src"] if deal.find("img") else ""
                 if image.startswith("data:image"): image = ""
                 deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
