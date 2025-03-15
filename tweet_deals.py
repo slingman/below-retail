@@ -18,8 +18,11 @@ client = tweepy.Client(
     consumer_secret=API_SECRET,
     access_token=ACCESS_TOKEN,
     access_token_secret=ACCESS_SECRET,
-    bearer_token=BEARER_TOKEN
+    bearer_token=BEARER_TOKEN  # Needed for uploading images
 )
+
+auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
+api = tweepy.API(auth)
 
 # Load sneaker deals from deals.json
 with open("deals.json", "r") as f:
@@ -37,9 +40,14 @@ if deals:
 
     tweet_text = f"🔥 {deal['name']} - {deal['price']}! Grab it here: {link} #SneakerDeals"
 
-    # ✅ Download the product image (if available)
+    # ✅ Download the product image (if available and valid)
     image_url = deal.get("image", "")  # Ensure the deal JSON contains an "image" field
     image_path = "sneaker.jpg"
+
+    # Ignore base64 images (Twitter only accepts regular image URLs)
+    if image_url.startswith("data:image"):  
+        print("❌ Skipping base64 image. Posting text-only tweet.")
+        image_url = ""  # Ignore base64 images
 
     if image_url:
         try:
@@ -62,7 +70,7 @@ if deals:
             print(f"❌ Error downloading image: {e}. Posting text-only tweet.")
             client.create_tweet(text=tweet_text)
     else:
-        print("❌ No image found in deal. Posting text-only tweet.")
+        print("❌ No valid image found. Posting text-only tweet.")
         client.create_tweet(text=tweet_text)
 else:
     print("❌ No sneaker deals found in deals.json")
