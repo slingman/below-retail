@@ -11,7 +11,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
 
 # ✅ Updated Sneaker Sale Sources
 SITES = [
@@ -19,13 +18,6 @@ SITES = [
     "https://www.adidas.com/us/sale",
     "https://www.footlocker.com/sale/",
     "https://www.finishline.com/store/shop/sale/",
-    "https://www.jdsports.com/sale/",
-    "https://www.champssports.com/sale/",
-    "https://www.hibbett.com/sale/",
-    "https://www.dtlr.com/collections/sale",
-    "https://www.shoepalace.com/collections/sale",
-    "https://www.newbalance.com/sale/",
-    "https://www.asics.com/us/en-us/sale/",
 ]
 
 # ✅ Rotating User-Agents
@@ -41,6 +33,7 @@ chrome_options.add_argument("--headless")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--window-size=1920x1080")
+chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # New line to bypass bot detection
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 deals = []
@@ -57,19 +50,14 @@ for site in SITES:
         "Connection": "keep-alive",
     }
 
-    USE_SELENIUM = any(keyword in site for keyword in ["nike", "adidas", "footlocker", "jd"])
+    USE_SELENIUM = any(keyword in site for keyword in ["nike", "adidas", "footlocker"])
 
     if USE_SELENIUM:
         print(f"⚠️ {site} is known for blocking bots, using Selenium first...")
         driver.get(site)
-        time.sleep(5)
+        time.sleep(random.uniform(10, 15))  # Increased wait for JavaScript
 
-        # Randomized mouse movements
-        actions = ActionChains(driver)
-        for _ in range(random.randint(3, 7)):  
-            actions.move_by_offset(random.randint(-10, 10), random.randint(-10, 10)).perform()
-            time.sleep(random.uniform(1, 3))
-
+        # Scroll down to load more products
         for _ in range(3):  
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
             time.sleep(3)
