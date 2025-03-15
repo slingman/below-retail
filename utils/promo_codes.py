@@ -11,8 +11,7 @@ price."""
         percent_match = re.search(r"(\d+)% off", promo_text)
         if percent_match:
             discount = float(percent_match.group(1))
-            return round(price * (1 - discount / 100), 2), f"{discount}% 
-OFF"
+            return round(price * (1 - discount / 100), 2), f"{discount}% OFF"
 
         # Check for fixed amount discount
         amount_match = re.search(r"\$([\d.]+) off", promo_text)
