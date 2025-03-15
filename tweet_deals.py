@@ -39,7 +39,7 @@ for product in deals.values():
     other_prices = sorted_prices[1:3]  # Show up to two alternative prices
 
     # ✅ Format comparison of other store prices
-    comparison_text = "\n".join([f"{p['store']} - ${p['price']}" for p in other_prices])
+    comparison_text = "\n".join([f"💰 {p['store']} - **${p['price']}**" for p in other_prices])
 
     best_deals.append({
         "name": product["name"],
@@ -55,10 +55,17 @@ if best_deals:
     deal = random.choice(best_deals)  # Pick a random best deal to tweet
 
     # ✅ Format tweet with promo code (if applicable)
+    tweet_text = f"🔥 **DEAL ALERT:** {deal['name']} now **${deal['best_price']}**!\n"
+    
     if deal["promo"]:
-        tweet_text = f"🔥 {deal['name']} is cheapest at {deal['best_store']} for ${deal['best_price']}!\n\n🎟️ Use code **{deal['promo']}** for extra savings!\n\nOther prices:\n{deal['comparison']}\n\nBuy here: {deal['best_link']} #BestDeal #Shopping"
-    else:
-        tweet_text = f"🔥 {deal['name']} is cheapest at {deal['best_store']} for ${deal['best_price']}!\n\nOther prices:\n{deal['comparison']}\n\nBuy here: {deal['best_link']} #BestDeal #Shopping"
+        tweet_text += f"\n🎟️ **Use code:** {deal['promo']} for extra savings!"
+
+    tweet_text += f"\n\n🏬 **Store:** {deal['best_store']}\n🔗 **Buy Now:** {deal['best_link']}\n"
+
+    if deal["comparison"]:
+        tweet_text += f"\n💡 **Other Prices:**\n{deal['comparison']}\n"
+
+    tweet_text += "\n🏷️ #BestDeal #Shopping"
 
     # ✅ Post tweet
     client.create_tweet(text=tweet_text)
