@@ -70,4 +70,61 @@ for site in SITES:
                 image = deal.find("img")["src"] if deal.find("img") else ""
                 deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
 
-        elif "sto
+        elif "stockx" in site:
+            for deal in soup.find_all("div", class_="tile"):
+                name = deal.find("div", class_="tile-title").text.strip()
+                price = deal.find("div", class_="tile-price").text.strip() if deal.find("div", class_="tile-price") else "Check Site"
+                link = "https://stockx.com" + deal.find("a")["href"]
+                image = deal.find("img")["src"] if deal.find("img") else ""
+                deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
+
+        elif "nike" in site:
+            for deal in soup.find_all("div", class_="product-card"):
+                name = deal.find("div", class_="product-card__title").text.strip()
+                price = deal.find("div", class_="product-price").text.strip()
+                link = deal.find("a")["href"]
+                image = deal.find("img")["src"] if deal.find("img") else ""
+                deals.append({"name": name, "price": price, "link": "https://www.nike.com" + link, "image": image, "source": site})
+
+        elif "adidas" in site:
+            for deal in soup.find_all("div", class_="product-card"):
+                name = deal.find("span", class_="gl-product-card__name").text.strip()
+                price = deal.find("div", class_="gl-price-item").text.strip()
+                link = deal.find("a")["href"]
+                image = deal.find("img")["src"] if deal.find("img") else ""
+                deals.append({"name": name, "price": price, "link": "https://www.adidas.com" + link, "image": image, "source": site})
+
+        elif "jdsports" in site:
+            for deal in soup.find_all("div", class_="productContainer"):
+                name = deal.find("p", class_="product_name").text.strip()
+                price = deal.find("span", class_="pri").text.strip()
+                link = deal.find("a")["href"]
+                image = deal.find("img")["src"] if deal.find("img") else ""
+                deals.append({"name": name, "price": price, "link": "https://www.jdsports.com" + link, "image": image, "source": site})
+
+        elif "goat" in site:
+            for deal in soup.find_all("div", class_="browse-grid-asset"):
+                name = deal.find("div", class_="d3-css-1s4gn2i").text.strip()
+                price = deal.find("div", class_="d3-css-1krp259").text.strip() if deal.find("div", class_="d3-css-1krp259") else "Check Site"
+                link = deal.find("a")["href"]
+                image = deal.find("img")["src"] if deal.find("img") else ""
+                deals.append({"name": name, "price": price, "link": "https://www.goat.com" + link, "image": image, "source": site})
+
+        elif "ebay" in site:
+            for deal in soup.find_all("li", class_="s-item"):
+                name = deal.find("h3", class_="s-item__title").text.strip()
+                price = deal.find("span", class_="s-item__price").text.strip()
+                link = deal.find("a")["href"]
+                image = deal.find("img")["src"] if deal.find("img") else ""
+                deals.append({"name": name, "price": price, "link": link, "image": image, "source": site})
+
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error fetching {site}: {e}")
+        continue
+
+if deals:
+    with open("deals.json", "w") as f:
+        json.dump(deals, f, indent=4)
+    print(f"✅ Scraped {len(deals)} sneaker deals with images!")
+else:
+    print("❌ No sneaker deals found! The website structures might have changed.")
