@@ -92,13 +92,27 @@ def scrape_deals(category, urls):
                 try:
                     name = deal.find("div", class_="product-card__title").text.strip()
                     
-                    # ✅ Extract sale price (discounted price)
-                    sale_price_elem = deal.find("div", class_="sale-price")
-                    sale_price = sale_price_elem.text.strip() if sale_price_elem else "N/A"
+                    # ✅ Extract sale price from different possible elements
+                    sale_price = "N/A"
+                    for sale_class in ["sale-price", "discount-price", "current-price"]:
+                        sale_price_elem = deal.find("div", class_=sale_class)
+                        if sale_price_elem:
+                            sale_price = sale_price_elem.text.strip()
+                            break  # Stop searching once found
 
-                    # ✅ Extract regular price (original price)
-                    regular_price_elem = deal.find("div", class_="regular-price")
-                    regular_price = regular_price_elem.text.strip() if regular_price_elem else sale_price  # Fallback to sale price if not found
+                    # ✅ Extract regular price from different possible elements
+                    regular_price = "N/A"
+                    for reg_class in ["regular-price", "original-price", "was-price"]:
+                        regular_price_elem = deal.find("div", class_=reg_class)
+                        if regular_price_elem:
+                            regular_price = regular_price_elem.text.strip()
+                            break  # Stop searching once found
+
+                    # ✅ If only one price is found, assume it's the sale price
+                    if regular_price == "N/A":
+                        regular_price = sale_price
+                    elif sale_price == "N/A":
+                        sale_price = regular_price  # No discount, single price displayed
 
                     # ✅ Extract product link
                     link = "https://www.nike.com" + deal.find("a")["href"]
