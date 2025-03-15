@@ -10,27 +10,27 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
-# ✅ Updated Deal Sources for Multiple Categories
+# ✅ Verified Deal Sources for Multiple Categories
 SITES = {
     "sneakers": [
-        "https://www.nike.com/w/sale-shoes",
-        "https://www.adidas.com/us/sale",
-        "https://www.footlocker.com/sale/",
+        "https://www.nike.com/w/sale-3yaep",  # Nike Sale
+        "https://www.adidas.com/us/sale",  # Adidas Sale
+        "https://www.footlocker.com/sale",  # Foot Locker Sale
     ],
     "tech": [
-        "https://www.bestbuy.com/site/top-deals/sale",
-        "https://www.amazon.com/deals",
-        "https://www.walmart.com/cp/electronics-clearance/1078524",
+        "https://www.bestbuy.com/site/top-deals",  # Best Buy Top Deals
+        "https://www.amazon.com/deals",  # Amazon Today's Deals
+        "https://www.walmart.com/cp/electronics-clearance/1078524",  # Walmart Electronics Clearance
     ],
     "gaming": [
-        "https://store.steampowered.com/specials",
-        "https://www.playstation.com/en-us/deals/",
-        "https://www.xbox.com/en-US/promotions/sales",
+        "https://store.steampowered.com/specials",  # Steam Specials
+        "https://www.playstation.com/en-us/deals/",  # PlayStation Deals
+        "https://www.xbox.com/en-US/promotions/sales",  # Xbox Sales & Specials
     ],
     "clothing": [
-        "https://www.macys.com/shop/sale/clearance",
-        "https://www.nordstromrack.com/sale",
-        "https://www.target.com/c/sale-clearance",
+        "https://www.macys.com/shop/sale/clearance",  # Macy's Clearance
+        "https://www.nordstromrack.com/sale",  # Nordstrom Rack Sale
+        "https://www.target.com/c/sale/-/N-4xw74",  # Target Sale
     ]
 }
 
