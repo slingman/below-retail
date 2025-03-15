@@ -1,6 +1,7 @@
 import time
 import json
 import random
+import re
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -20,16 +21,6 @@ SITES = {
         "https://www.bestbuy.com/site/top-deals",  # Best Buy Top Deals
         "https://www.amazon.com/deals",  # Amazon Today's Deals
         "https://www.walmart.com/cp/electronics-clearance/1078524",  # Walmart Electronics Clearance
-    ],
-    "gaming": [
-        "https://store.steampowered.com/specials",  # Steam Specials
-        "https://www.playstation.com/en-us/deals/",  # PlayStation Deals
-        "https://www.xbox.com/en-US/promotions/sales",  # Xbox Sales & Specials
-    ],
-    "clothing": [
-        "https://www.macys.com/shop/sale/clearance",  # Macy's Clearance
-        "https://www.nordstromrack.com/sale",  # Nordstrom Rack Sale
-        "https://www.target.com/c/sale/-/N-4xw74",  # Target Sale
     ]
 }
 
@@ -46,11 +37,35 @@ chrome_options.add_experimental_option("useAutomationExtension", False)
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
-deals = []
+# ✅ Store products with multiple price options
+price_comparison = {}
 
-# ✅ Scraping Function (Always Uses Selenium)
+# ✅ Function to apply promo code discounts
+def apply_promo_code(price, promo_text):
+    try:
+        if not promo_text:
+            return price, None  # No promo available
+
+        # Check for percentage discount
+        percent_match = re.search(r"(\d+)% off", promo_text)
+        if percent_match:
+            discount = float(percent_match.group(1))
+            return round(price * (1 - discount / 100), 2), f"{discount}% OFF"
+
+        # Check for fixed amount discount
+        amount_match = re.search(r"\$([\d.]+) off", promo_text)
+        if amount_match:
+            discount = float(amount_match.group(1))
+            return max(price - discount, 0), f"${discount} OFF"
+
+    except Exception as e:
+        print(f"⚠️ Error applying promo code: {e}")
+
+    return price, None  # Return original price if no valid promo
+
+# ✅ Scraping Function (Now Uses Selenium Only)
 def scrape_deals(category, urls):
-    global deals
+    global price_comparison
     print(f"🔍 Scraping {category.upper()} Deals with Selenium...")
 
     for site in urls:
@@ -72,20 +87,26 @@ def scrape_deals(category, urls):
             # ✅ Extract Deals
             for deal in soup.find_all("div", class_="product-card"):
                 try:
-                    print("\n🔍 Full Product Card HTML:\n", deal.prettify())  # Debugging step
-
                     name_elem = deal.find("div", class_="product-card__title")
                     name = name_elem.text.strip() if name_elem else "Unknown Product"
 
                     # ✅ Extract sale price
                     sale_price_elem = deal.find("div", class_="product-price is--current-price")
-                    sale_price = sale_price_elem.text.strip() if sale_price_elem else "N/A"
+                    sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "") if sale_price_elem else "N/A"
 
                     # ✅ Extract regular price
                     regular_price_elem = deal.find("div", class_="product-price us__styling is--striked-out")
-                    regular_price = regular_price_elem.text.strip() if regular_price_elem else sale_price
+                    regular_price = regular_price_elem.text.strip().replace("$", "").replace(",", "") if regular_price_elem else sale_price
 
-                    print(f"✅ Final Prices - Regular: {regular_price}, Sale: {sale_price}")
+                    # Convert to float for comparison
+                    try:
+                        sale_price = float(sale_price) if sale_price != "N/A" else None
+                        regular_price = float(regular_price) if regular_price != "N/A" else None
+                    except:
+                        sale_price, regular_price = None, None
+
+                    if sale_price is None:
+                        continue  # Skip if no price available
 
                     # ✅ Extract product link
                     link_elem = deal.find("a", class_="product-card__link-overlay")
@@ -95,14 +116,33 @@ def scrape_deals(category, urls):
                     image_elem = deal.find("img", class_="product-card__hero-image")
                     image = image_elem["src"] if image_elem else ""
 
-                    deals.append({
-                        "name": name,
-                        "regular_price": regular_price,
-                        "sale_price": sale_price,
-                        "link": link,
-                        "image": image,
-                        "category": category
-                    })
+                    # ✅ Extract Promo Code (If Available)
+                    promo_elem = soup.find("div", class_="promo-banner")  # Adjust class if needed
+                    promo_text = promo_elem.text.strip() if promo_elem else None
+
+                    # ✅ Apply Promo Code Discount
+                    final_price, applied_promo = apply_promo_code(sale_price, promo_text)
+
+                    # ✅ Store product for price comparison
+                    if name in price_comparison:
+                        price_comparison[name]["prices"].append({
+                            "store": site,
+                            "price": final_price,
+                            "link": link,
+                            "promo": applied_promo
+                        })
+                    else:
+                        price_comparison[name] = {
+                            "name": name,
+                            "image": image,
+                            "prices": [{
+                                "store": site,
+                                "price": final_price,
+                                "link": link,
+                                "promo": applied_promo
+                            }]
+                        }
+
                 except Exception as e:
                     print(f"⚠️ Skipping product due to error: {e}")
                     continue
@@ -115,10 +155,10 @@ for category, urls in SITES.items():
     scrape_deals(category, urls)
 
 # ✅ Save Deals to JSON
-if deals:
+if price_comparison:
     with open("deals.json", "w") as f:
-        json.dump(deals, f, indent=4)
-    print(f"✅ Scraped {len(deals)} deals across all categories!")
+        json.dump(price_comparison, f, indent=4)
+    print(f"✅ Scraped {len(price_comparison)} unique products across multiple stores!")
 else:
     print("❌ No deals found! The website structures might have changed.")
 
