@@ -2,15 +2,17 @@ import tweepy
 import json
 import random
 import os
-import requests
-from urllib.parse import urlparse
+from dotenv import load_dotenv
 
-# ✅ Twitter API Credentials (Replace with your keys)
-API_KEY = "LXNWeMaztoQ4xislo0zImh0nL"
-API_SECRET = "XOpMaxXRu3Iq94rUNpXIrvaOsVooS9eS5bnoTDqna20qGFYQAT"
-ACCESS_TOKEN = "14116180-ghHOQuTbcmD4d095S8vtqAd3byF0BUcVMvCl0kXZn"
-ACCESS_SECRET = "EBmOjqzIdVgW5n29kzU9wx5eRXXmpywqaYNYobVW1lkqC"
-BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAInJzwEAAAAAycsaevjYgKgwxeRGOle37jMYqTQ%3DHPiaCNrpTfv322txcJf95Ih1dHU18mfSjwa4Yyqv83L6oi063d"
+# ✅ Load environment variables from .env file
+load_dotenv()
+
+# ✅ Twitter API Credentials (Loaded Securely)
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+ACCESS_SECRET = os.getenv("ACCESS_SECRET")
+BEARER_TOKEN = os.getenv("BEARER_TOKEN")
 
 # ✅ Authenticate with Twitter API
 client = tweepy.Client(
@@ -21,98 +23,45 @@ client = tweepy.Client(
     bearer_token=BEARER_TOKEN
 )
 
-auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
-api = tweepy.API(auth)
-
 # ✅ Load deals from JSON file
 with open("deals.json", "r") as f:
     deals = json.load(f)
 
-# ✅ Function to filter deals (only tweet if discount is 30%+)
-def is_good_deal(deal):
-    regular_price = deal.get("regular_price", "").replace("$", "").replace(",", "")
-    sale_price = deal.get("sale_price", "").replace("$", "").replace(",", "")
+# ✅ Find the best price for each product
+best_deals = []
+for product in deals.values():
+    if len(product["prices"]) < 2:
+        continue  # Skip if only one store has the product
 
-    # ✅ Skip deals with missing price information
-    if not regular_price or not sale_price:
-        return False  
+    # ✅ Sort prices and select the cheapest option (after applying promo codes)
+    sorted_prices = sorted(product["prices"], key=lambda x: x["price"])
+    best_price = sorted_prices[0]  # Cheapest store
+    other_prices = sorted_prices[1:3]  # Show up to two alternative prices
 
-    try:
-        regular_price = float(regular_price)
-        sale_price = float(sale_price)
-        discount = ((regular_price - sale_price) / regular_price) * 100
-        return discount >= 10  # ✅ Only tweet deals that are 10%+ off
-    except:
-        return False
+    # ✅ Format comparison of other store prices
+    comparison_text = "\n".join([f"{p['store']} - ${p['price']}" for p in other_prices])
 
-# ✅ Apply filter
-filtered_deals = [deal for deal in deals if is_good_deal(deal)]
+    best_deals.append({
+        "name": product["name"],
+        "best_store": best_price["store"],
+        "best_price": best_price["price"],
+        "best_link": best_price["link"],
+        "promo": best_price.get("promo", None),  # Get promo code if available
+        "comparison": comparison_text
+    })
 
-if not filtered_deals:
-    print("❌ No good deals (10%+ off) to tweet.")
-    exit()
+# ✅ Post tweet
+if best_deals:
+    deal = random.choice(best_deals)  # Pick a random best deal to tweet
 
-# ✅ Select a random deal from the filtered ones
-deal = random.choice(filtered_deals)
+    # ✅ Format tweet with promo code (if applicable)
+    if deal["promo"]:
+        tweet_text = f"🔥 {deal['name']} is cheapest at {deal['best_store']} for ${deal['best_price']}!\n\n🎟️ Use code **{deal['promo']}** for extra savings!\n\nOther prices:\n{deal['comparison']}\n\nBuy here: {deal['best_link']} #BestDeal #Shopping"
+    else:
+        tweet_text = f"🔥 {deal['name']} is cheapest at {deal['best_store']} for ${deal['best_price']}!\n\nOther prices:\n{deal['comparison']}\n\nBuy here: {deal['best_link']} #BestDeal #Shopping"
 
-# ✅ Handle missing sale price safely
-sale_price = deal.get("sale_price", "Unknown Price")
-regular_price = deal.get("regular_price", "Unknown Price")
-
-# ✅ Attach affiliate links based on store/category
-AFFILIATE_LINKS = {
-    "amazon.com": "https://affiliate-program.amazon.com/?ref=your_affiliate_id",
-    "bestbuy.com": "https://www.bestbuy.com/site/misc/affiliate-program?ref=your_affiliate_id",
-    "walmart.com": "https://affiliates.walmart.com/?ref=your_affiliate_id",
-    "target.com": "https://affiliate.target.com/?ref=your_affiliate_id",
-    "ebay.com": "https://partnernetwork.ebay.com/?ref=your_affiliate_id",
-    "nike.com": "https://www.nike.com/affiliate?ref=your_affiliate_id",
-    "adidas.com": "https://www.adidas.com/us/affiliates?ref=your_affiliate_id",
-    "footlocker.com": "https://www.footlocker.com/affiliate?ref=your_affiliate_id",
-}
-
-# ✅ Find matching affiliate link
-deal_url = deal["link"].strip()
-for store in AFFILIATE_LINKS:
-    if store in deal_url:
-        deal_url = AFFILIATE_LINKS[store] + "&url=" + deal_url
-
-# ✅ Format the tweet
-tweet_text = f"🔥 {deal['name']} - {sale_price} (Reg: {regular_price})! Buy here: {deal_url} #Deals #Shopping"
-
-# ✅ Check if the deal has a valid image
-image_url = deal.get("image", "")  
-image_path = "deal_image.jpg"
-
-# ✅ Ignore base64 images (Twitter doesn't support them)
-if image_url.startswith("data:image"):  
-    print("❌ Skipping base64 image. Posting text-only tweet.")
-    image_url = ""
-
-# ✅ Download and upload image if valid
-if image_url:
-    try:
-        response = requests.get(image_url, stream=True)
-        if response.status_code == 200:
-            with open(image_path, "wb") as img_file:
-                for chunk in response.iter_content(1024):
-                    img_file.write(chunk)
-
-            # ✅ Upload the image to Twitter
-            media = api.media_upload(image_path)
-
-            # ✅ Post tweet with image
-            client.create_tweet(text=tweet_text, media_ids=[media.media_id])
-            print("✅ Tweet with image posted:", tweet_text)
-
-            # ✅ Remove the image file after posting
-            os.remove(image_path)
-        else:
-            print("❌ Image download failed. Posting text-only tweet.")
-            client.create_tweet(text=tweet_text)
-    except Exception as e:
-        print(f"❌ Error downloading image: {e}. Posting text-only tweet.")
-        client.create_tweet(text=tweet_text)
-else:
-    print("❌ No valid image found. Posting text-only tweet.")
+    # ✅ Post tweet
     client.create_tweet(text=tweet_text)
+    print("✅ Tweet posted:", tweet_text)
+else:
+    print("❌ No valid deals to tweet.")
