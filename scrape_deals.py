@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import json
 
 # Define the sneaker deal website (example)
-URL = "https://www.example.com/sneaker-deals"  # Replace with a real URL
+URL = "https://slingman.github.io/sneaker-deals"  # Replace with a real URL
 headers = {"User-Agent": "Mozilla/5.0"}
 
 response = requests.get(URL, headers=headers)
