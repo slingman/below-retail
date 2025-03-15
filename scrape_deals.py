@@ -10,24 +10,33 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
-# ✅ Sneaker Sale Sources
-SITES = [
-    "https://www.nike.com/w/sale-shoes",
-    "https://www.adidas.com/us/sale",
-    "https://www.footlocker.com/sale/",
-    "https://www.finishline.com/store/shop/sale/",
-]
+# ✅ Updated Deal Sources for Multiple Categories
+SITES = {
+    "sneakers": [
+        "https://www.nike.com/w/sale-shoes",
+        "https://www.adidas.com/us/sale",
+        "https://www.footlocker.com/sale/",
+    ],
+    "tech": [
+        "https://www.bestbuy.com/site/top-deals/sale",
+        "https://www.amazon.com/deals",
+        "https://www.walmart.com/cp/electronics-clearance/1078524",
+    ],
+    "gaming": [
+        "https://store.steampowered.com/specials",
+        "https://www.playstation.com/en-us/deals/",
+        "https://www.xbox.com/en-US/promotions/sales",
+    ],
+    "clothing": [
+        "https://www.macys.com/shop/sale/clearance",
+        "https://www.nordstromrack.com/sale",
+        "https://www.target.com/c/sale-clearance",
+    ]
+}
 
-# ✅ Rotating User-Agents
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/537.36",
-]
-
-# ✅ Setup Selenium
+# ✅ Setup Selenium for JavaScript-heavy Sites
 chrome_options = Options()
-chrome_options.add_argument("--headless=new")  # Uses new headless mode
+chrome_options.add_argument("--headless=new")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--window-size=1920x1080")
@@ -40,38 +49,69 @@ driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () =>
 
 deals = []
 
-for site in SITES:
-    print(f"🔍 Scraping {site} - Checking structure...")
+# ✅ Scraping Function
+def scrape_deals(category, urls):
+    global deals
+    print(f"🔍 Scraping {category.upper()} Deals...")
+    
+    for site in urls:
+        print(f"🔍 Checking {site}")
 
-    headers = {
-        "User-Agent": random.choice(USER_AGENTS),
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": f"https://www.google.com/search?q={random.randint(100000,999999)}",
-        "DNT": "1",
-        "Upgrade-Insecure-Requests": "1",
-        "Connection": "keep-alive",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-    }
+        headers = {
+            "User-Agent": random.choice([
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36",
+            ]),
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com",
+            "Connection": "keep-alive"
+        }
 
-    print(f"⚠️ {site} is known for blocking bots, using Selenium first...")
-    driver.get(site)
-    time.sleep(random.uniform(10, 15))
+        try:
+            response = requests.get(site, headers=headers, timeout=10)
+            
+            # If the site blocks normal requests, use Selenium
+            if response.status_code == 403 or "javascript" in response.text.lower():
+                print(f"⚠️ {site} requires JavaScript, switching to Selenium...")
+                driver.get(site)
+                time.sleep(random.uniform(5, 10))  # Let JavaScript load
 
-    # Fake keyboard presses
-    actions = webdriver.ActionChains(driver)
-    actions.send_keys(Keys.TAB).perform()
-    time.sleep(random.uniform(1, 3))
+                # Scroll to load more items
+                for _ in range(3):
+                    driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
+                    time.sleep(random.uniform(2, 4))
 
-    # Scroll slowly like a human
-    scroll_pause_time = random.uniform(2, 4)
-    for _ in range(3):
-        driver.execute_script("window.scrollBy(0, window.innerHeight * 0.5);")
-        time.sleep(scroll_pause_time)
+                page_source = driver.page_source
+                soup = BeautifulSoup(page_source, "html.parser")
+            else:
+                soup = BeautifulSoup(response.text, "html.parser")
 
-    # Get page data
-    page_source = driver.page_source
-    soup = BeautifulSoup(page_source, "html.parser")
+            # ✅ Extract Deals (Different Per Website)
+            for deal in soup.find_all("div", class_="product-card"):
+                try:
+                    name = deal.find("div", class_="product-card__title").text.strip()
+                    price = deal.find("div", class_="product-price").text.strip()
+                    link = "https://www.nike.com" + deal.find("a")["href"]
+                    image = deal.find("img")["src"] if deal.find("img") else ""
+                    deals.append({"name": name, "price": price, "link": link, "image": image, "category": category})
+                except:
+                    continue
 
-# ✅ Close Selenium WebDriver
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Error fetching {site}: {e}")
+
+# ✅ Loop through each category & scrape
+for category, urls in SITES.items():
+    scrape_deals(category, urls)
+
+# ✅ Save Deals to JSON
+if deals:
+    with open("deals.json", "w") as f:
+        json.dump(deals, f, indent=4)
+    print(f"✅ Scraped {len(deals)} deals across all categories!")
+else:
+    print("❌ No deals found! The website structures might have changed.")
+
+# ✅ Close Selenium
 driver.quit()
