@@ -99,4 +99,26 @@ for site in SITES:
 
         elif "goat" in site:
             for deal in soup.find_all("div", class_="browse-grid-asset"):
-                name = deal.find("div", class_="d3-css-1s4gn2i").text.strip(
+                name = deal.find("div", class_="d3-css-1s4gn2i").text.strip()
+                price = deal.find("div", class_="d3-css-1krp259").text.strip() if deal.find("div", class_="d3-css-1krp259") else "Check Site"
+                link = deal.find("a")["href"]
+                deals.append({"name": name, "price": price, "link": "https://www.goat.com" + link, "source": site})
+
+        elif "ebay" in site:
+            for deal in soup.find_all("li", class_="s-item"):
+                name = deal.find("h3", class_="s-item__title").text.strip()
+                price = deal.find("span", class_="s-item__price").text.strip()
+                link = deal.find("a")["href"]
+                deals.append({"name": name, "price": price, "link": link, "source": site})
+
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error fetching {site}: {e}")
+        continue
+
+# Save sneaker deals to JSON file
+if deals:
+    with open("deals.json", "w") as f:
+        json.dump(deals, f, indent=4)
+    print(f"✅ Scraped {len(deals)} sneaker deals from multiple sites!")
+else:
+    print("❌ No sneaker deals found! The website structures might have changed.")
