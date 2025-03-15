@@ -87,14 +87,33 @@ def scrape_deals(category, urls):
             else:
                 soup = BeautifulSoup(response.text, "html.parser")
 
-            # ✅ Extract Deals (Different Per Website)
+            # ✅ Extract Deals (Updated to Capture Sale & Regular Price)
             for deal in soup.find_all("div", class_="product-card"):
                 try:
                     name = deal.find("div", class_="product-card__title").text.strip()
-                    price = deal.find("div", class_="product-price").text.strip()
+                    
+                    # ✅ Extract sale price (discounted price)
+                    sale_price_elem = deal.find("div", class_="sale-price")
+                    sale_price = sale_price_elem.text.strip() if sale_price_elem else "N/A"
+
+                    # ✅ Extract regular price (original price)
+                    regular_price_elem = deal.find("div", class_="regular-price")
+                    regular_price = regular_price_elem.text.strip() if regular_price_elem else sale_price  # Fallback to sale price if not found
+
+                    # ✅ Extract product link
                     link = "https://www.nike.com" + deal.find("a")["href"]
+
+                    # ✅ Extract product image
                     image = deal.find("img")["src"] if deal.find("img") else ""
-                    deals.append({"name": name, "price": price, "link": link, "image": image, "category": category})
+
+                    deals.append({
+                        "name": name,
+                        "regular_price": regular_price,
+                        "sale_price": sale_price,
+                        "link": link,
+                        "image": image,
+                        "category": category
+                    })
                 except:
                     continue
 
