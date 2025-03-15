@@ -48,7 +48,7 @@ driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () =>
 
 deals = []
 
-# ✅ Scraping Function (Now Uses Selenium First)
+# ✅ Scraping Function (Always Uses Selenium)
 def scrape_deals(category, urls):
     global deals
     print(f"🔍 Scraping {category.upper()} Deals with Selenium...")
@@ -69,46 +69,30 @@ def scrape_deals(category, urls):
             page_source = driver.page_source
             soup = BeautifulSoup(page_source, "html.parser")
 
-            # ✅ Extract Deals (Now Uses Selenium Only)
+            # ✅ Extract Deals
             for deal in soup.find_all("div", class_="product-card"):
                 try:
                     print("\n🔍 Full Product Card HTML:\n", deal.prettify())  # Debugging step
 
-                    name = deal.find("div", class_="product-card__title")
-                    name = name.text.strip() if name else "Unknown Product"
+                    name_elem = deal.find("div", class_="product-card__title")
+                    name = name_elem.text.strip() if name_elem else "Unknown Product"
 
-                    # ✅ Extract sale price from multiple possible elements
-                    sale_price = "N/A"
-                    for sale_class in ["sale-price", "discount-price", "current-price", "price-sale"]:
-                        sale_price_elem = deal.find("div", class_=sale_class)
-                        if sale_price_elem:
-                            sale_price = sale_price_elem.text.strip()
-                            print(f"🔍 Found Sale Price: {sale_price}")  # Debugging output
-                            break  
+                    # ✅ Extract sale price
+                    sale_price_elem = deal.find("div", class_="product-price is--current-price")
+                    sale_price = sale_price_elem.text.strip() if sale_price_elem else "N/A"
 
-                    # ✅ Extract regular price from multiple possible elements
-                    regular_price = "N/A"
-                    for reg_class in ["regular-price", "original-price", "was-price", "price-original"]:
-                        regular_price_elem = deal.find("div", class_=reg_class)
-                        if regular_price_elem:
-                            regular_price = regular_price_elem.text.strip()
-                            print(f"🔍 Found Regular Price: {regular_price}")  # Debugging output
-                            break  
-
-                    # ✅ If only one price is found, assume it's the sale price
-                    if regular_price == "N/A" and sale_price != "N/A":
-                        regular_price = sale_price
-                    elif sale_price == "N/A" and regular_price != "N/A":
-                        sale_price = regular_price  
+                    # ✅ Extract regular price
+                    regular_price_elem = deal.find("div", class_="product-price us__styling is--striked-out")
+                    regular_price = regular_price_elem.text.strip() if regular_price_elem else sale_price
 
                     print(f"✅ Final Prices - Regular: {regular_price}, Sale: {sale_price}")
 
                     # ✅ Extract product link
-                    link_elem = deal.find("a")
+                    link_elem = deal.find("a", class_="product-card__link-overlay")
                     link = link_elem["href"] if link_elem else "#"
 
                     # ✅ Extract product image
-                    image_elem = deal.find("img")
+                    image_elem = deal.find("img", class_="product-card__hero-image")
                     image = image_elem["src"] if image_elem else ""
 
                     deals.append({
