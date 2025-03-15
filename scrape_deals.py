@@ -3,34 +3,34 @@ import requests
 from bs4 import BeautifulSoup
 import json
 
-# ✅ Expanded Sneaker Sale Sources (Including New Balance & ASICS)
+# ✅ Updated Sneaker Sale Sources (Fixed 404s & Removed Dead Links)
 SITES = [
-    "https://www.nike.com/w/sale-shoes-3yaepz5e1x6",
+    "https://www.nike.com/w/sale-shoes",
     "https://www.adidas.com/us/sale",
-    "https://www.footlocker.com/sale/shoes",
-    "https://www.finishline.com/store/shoes/sale/_/N-26d6v7r",
-    "https://www.eastbay.com/sale/shoes/",
-    "https://www.jdsports.com/sale/footwear/",
-    "https://www.champssports.com/sale/shoes",
-    "https://www.hibbett.com/sale/shoes/",
-    "https://www.dtlr.com/collections/footwear-sale",
+    "https://www.footlocker.com/sale/",
+    "https://www.finishline.com/store/shop/sale/",
+    "https://www.jdsports.com/sale/",
+    "https://www.champssports.com/sale/",
+    "https://www.hibbett.com/sale/",
+    "https://www.dtlr.com/collections/sale",
     "https://www.shoepalace.com/collections/sale",
     "https://www.newbalance.com/sale/",
-    "https://www.asics.com/us/en-us/sale/c/sale/",
+    "https://www.asics.com/us/en-us/sale/",
     "https://stockx.com/sneakers",
     "https://www.goat.com/sneakers",
     "https://www.flightclub.com/sneakers",
     "https://www.ebay.com/b/Sneakers/15709/bn_57918",
-    "https://www.amazon.com/s?k=sneakers+sale",
-    "https://solecollector.com/news/sneaker-release-dates",
-    "https://sneakernews.com/release-dates/",
-    "https://kicksdeals.com/",
-    "https://www.reddit.com/r/SneakerDeals/"
+    "https://www.amazon.com/s?k=sneakers+sale"
 ]
 
-# Make scraper look like a real browser
+# ✅ Improved Headers to Prevent 403 Blocks
 headers = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com",
+    "DNT": "1",  # Do Not Track
+    "Upgrade-Insecure-Requests": "1",
+    "Connection": "keep-alive"
 }
 
 deals = []
@@ -41,8 +41,13 @@ for site in SITES:
     print(f"🔍 Scraping {site} - Checking structure...")
 
     try:
-        response = session.get(site)
-        time.sleep(5)  # Delay to prevent blocking
+        # ✅ Retry Mechanism to Fix 400 Errors
+        for _ in range(3):  # Retry up to 3 times
+            response = session.get(site)
+            if response.status_code == 200:
+                break  # Exit loop if successful
+            print(f"⚠️ Retrying {site} (Status Code: {response.status_code})")
+            time.sleep(3)  # Wait before retrying
 
         if response.status_code != 200:
             print(f"❌ Failed to fetch {site} (Status Code: {response.status_code})")
