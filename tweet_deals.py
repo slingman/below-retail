@@ -31,9 +31,9 @@ api = tweepy.API(auth)
 with open("deals.json", "r") as f:
     deals = json.load(f)
 
-# ✅ Tweet Multiple Deals Per Run (Limited to 3)
+# ✅ Tweet 1 Deal Per Run (Safer Rate Limits)
 if deals:
-    num_tweets = min(1, len(deals))  # Tweets 1 deal per run (safer)
+    num_tweets = min(1, len(deals))  # 🔹 Now only tweets 1 deal per run
     random_deals = random.sample(list(deals.values()), num_tweets)
 
     for deal in random_deals:
@@ -98,14 +98,25 @@ if deals:
 
             print("✅ Tweet posted:", tweet_text)
 
-            # ✅ Add a delay after each tweet to avoid rate limits
-            time.sleep(random.uniform(120, 300))  # 🔹 Now waits 2-5 minutes before next tweet
+            # ✅ Log the tweet to tweet_log.txt
+            with open("tweet_log.txt", "a") as log_file:
+                log_file.write(f"✅ Tweeted: {tweet_text}\n")
+
+            # ✅ Add a delay to avoid rate limits (2-5 min between tweets)
+            time.sleep(random.uniform(120, 300))
 
         except tweepy.errors.TooManyRequests as e:
             print("🚨 Twitter rate limit reached! Waiting for 1 hour before retrying...")
+            with open("tweet_log.txt", "a") as log_file:
+                log_file.write("🚨 Twitter rate limit reached! Waiting for 1 hour before retrying...\n")
             time.sleep(3600)  # 🔹 Now waits 1 hour if rate limit is hit
+
         except Exception as e:
             print(f"❌ Error posting tweet: {e}")
+            with open("tweet_log.txt", "a") as log_file:
+                log_file.write(f"❌ Error posting tweet: {e}\n")
 
 else:
     print("❌ No deals found to tweet.")
+    with open("tweet_log.txt", "a") as log_file:
+        log_file.write("❌ No deals found to tweet.\n")
