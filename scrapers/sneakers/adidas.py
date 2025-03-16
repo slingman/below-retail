@@ -1,32 +1,38 @@
 import time
-from selenium.webdriver.common.by import By
+import requests
+from bs4 import BeautifulSoup
 from utils.selenium_setup import get_selenium_driver
 
+ADIDAS_SEARCH_URL = "https://www.adidas.com/us/search?q={query}"
+
 def scrape_adidas(query):
+    print(f"🔍 Searching Adidas for {query}...")
+
     driver = get_selenium_driver()
-    search_url = f"https://www.adidas.com/us/search?q={query.replace(' ', '%20')}"
+    search_url = ADIDAS_SEARCH_URL.format(query=query.replace(" ", "%20"))
     driver.get(search_url)
     time.sleep(5)
 
-    products = []
-    items = driver.find_elements(By.CLASS_NAME, "glass-product-card")
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
 
-    for item in items:
+    results = {}
+
+    for product in soup.find_all("div", class_="gl-product-card"):
         try:
-            name = item.find_element(By.CLASS_NAME, "glass-product-card__title").text.strip()
-            price = item.find_element(By.CLASS_NAME, "gl-price__value").text.strip().replace('$', '')
-            link = item.find_element(By.CLASS_NAME, "glass-product-card__assets-link").get_attribute("href")
-            image = item.find_element(By.TAG_NAME, "img").get_attribute("src")
+            name = product.find("span", class_="gl-product-card__name").text.strip()
+            price = product.find("div", class_="gl-price-item").text.strip().replace("$", "")
+            link = "https://www.adidas.com" + product.find("a")["href"]
+            image = product.find("img")["src"] if product.find("img") else ""
 
-            products.append({
+            results[name] = {
                 "name": name,
-                "store": "Adidas",
-                "price": float(price),
-                "link": link,
                 "image": image,
-            })
+                "price": float(price.replace(",", "")),
+                "link": link,
+                "promo": None
+            }
         except:
             continue
 
-    driver.quit()
-    return products
+    return results
