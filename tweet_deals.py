@@ -3,7 +3,7 @@ import json
 import random
 import os
 import requests
-import time  # ✅ Add time module for delay
+import time  # ✅ Import time for delays
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
@@ -15,7 +15,7 @@ ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 ACCESS_SECRET = os.getenv("ACCESS_SECRET")
 BEARER_TOKEN = os.getenv("BEARER_TOKEN")
 
-# Authenticate with Twitter API
+# ✅ Authenticate with Twitter API
 client = tweepy.Client(
     consumer_key=API_KEY,
     consumer_secret=API_SECRET,
@@ -27,13 +27,13 @@ client = tweepy.Client(
 auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
 api = tweepy.API(auth)
 
-# Load deals from deals.json
+# ✅ Load deals from deals.json
 with open("deals.json", "r") as f:
     deals = json.load(f)
 
-# ✅ Tweet Multiple Deals Per Run
+# ✅ Tweet Multiple Deals Per Run (Limited to 3)
 if deals:
-    num_tweets = min(5, len(deals))  # Adjust the number of deals to tweet
+    num_tweets = min(3, len(deals))  # 🔹 Now tweets max 3 deals per run
     random_deals = random.sample(list(deals.values()), num_tweets)
 
     for deal in random_deals:
@@ -79,8 +79,9 @@ if deals:
             print("❌ Skipping base64 image. Posting text-only tweet.")
             image_url = ""
 
-        if image_url:
-            try:
+        try:
+            media_id = None
+            if image_url:
                 response = requests.get(image_url, stream=True)
                 if response.status_code == 200:
                     with open(image_path, "wb") as img_file:
@@ -88,21 +89,23 @@ if deals:
                             img_file.write(chunk)
 
                     media = api.media_upload(image_path)
+                    media_id = media.media_id
 
-                    client.create_tweet(text=tweet_text, media_ids=[media.media_id])
-                    print("✅ Tweet with image posted:", tweet_text)
-                else:
-                    print("❌ Image download failed. Posting text-only tweet.")
-                    client.create_tweet(text=tweet_text)
-            except Exception as e:
-                print(f"❌ Error downloading image: {e}. Posting text-only tweet.")
+            if media_id:
+                client.create_tweet(text=tweet_text, media_ids=[media_id])
+            else:
                 client.create_tweet(text=tweet_text)
-        else:
-            print("❌ No valid image found. Posting text-only tweet.")
-            client.create_tweet(text=tweet_text)
 
-        # ✅ Wait 30-60 seconds before tweeting the next deal
-        time.sleep(random.uniform(30, 60))
+            print("✅ Tweet posted:", tweet_text)
+
+            # ✅ Add a delay after each tweet to avoid rate limits
+            time.sleep(random.uniform(120, 300))  # 🔹 Now waits 2-5 minutes before next tweet
+
+        except tweepy.errors.TooManyRequests as e:
+            print("🚨 Twitter rate limit reached! Waiting for 1 hour before retrying...")
+            time.sleep(3600)  # 🔹 Now waits 1 hour if rate limit is hit
+        except Exception as e:
+            print(f"❌ Error posting tweet: {e}")
 
 else:
     print("❌ No deals found to tweet.")
