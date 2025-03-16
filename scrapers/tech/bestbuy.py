@@ -10,12 +10,11 @@ def scrape_bestbuy():
     print("🔍 Scraping Best Buy Tech Deals...")
     driver = get_selenium_driver()
     url = "https://www.bestbuy.com/site/top-deals"
-    
+
     try:
         driver.get(url)
         time.sleep(5)
 
-        # Scroll to load more items
         for _ in range(3):
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
             time.sleep(2)
@@ -25,20 +24,23 @@ def scrape_bestbuy():
 
         for deal in soup.find_all("div", class_="sku-item"):
             try:
-                name = deal.find("h4", class_="sku-header").text.strip()
-                sale_price = deal.find("div", 
-class_="priceView-hero-price").text.strip().replace("$", "")
-                regular_price_elem = deal.find("div", 
-class_="pricing-price__regular-price")
-                regular_price = 
-regular_price_elem.text.strip().replace("$", "") if regular_price_elem else 
-sale_price
-                link = "https://www.bestbuy.com" + deal.find("a")["href"]
-                image_elem = deal.find("img")
+                name_elem = deal.find("h4", class_="sku-header")
+                sale_price_elem = deal.find("div", class_="priceView-hero-price")
+                regular_price_elem = deal.find("div", class_="pricing-price__regular-price")
+                link_elem = deal.find("a", class_="sku-header")
+                image_elem = deal.find("img", class_="product-image")
+
+                if not name_elem or not sale_price_elem or not link_elem:
+                    continue  # Skip if essential elements are missing
+
+                name = name_elem.text.strip()
+                sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "")
+                regular_price = regular_price_elem.text.strip().replace("$", "").replace(",", "") if regular_price_elem else sale_price
+                link = "https://www.bestbuy.com" + link_elem["href"]
                 image = image_elem["src"] if image_elem else ""
 
-                final_price, promo = apply_promo_code(float(sale_price), 
-None)
+                # Apply promo codes (if applicable)
+                final_price, promo = apply_promo_code(float(sale_price), None)
 
                 products[name] = {
                     "name": name,
@@ -61,4 +63,3 @@ None)
 
     finally:
         driver.quit()
-
