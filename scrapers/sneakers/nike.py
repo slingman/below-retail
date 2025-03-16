@@ -1,32 +1,39 @@
 import time
-from selenium.webdriver.common.by import By
+import json
+import requests
+from bs4 import BeautifulSoup
 from utils.selenium_setup import get_selenium_driver
 
+NIKE_SEARCH_URL = "https://www.nike.com/w?q={query}&vst={query}"
+
 def scrape_nike(query):
+    print(f"🔍 Searching Nike for {query}...")
+
     driver = get_selenium_driver()
-    search_url = f"https://www.nike.com/w?q={query.replace(' ', '%20')}"
+    search_url = NIKE_SEARCH_URL.format(query=query.replace(" ", "%20"))
     driver.get(search_url)
     time.sleep(5)
 
-    products = []
-    items = driver.find_elements(By.CLASS_NAME, "product-card")
-    
-    for item in items:
-        try:
-            name = item.find_element(By.CLASS_NAME, "product-card__title").text.strip()
-            price = item.find_element(By.CLASS_NAME, "product-price").text.strip().replace('$', '')
-            link = item.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
-            image = item.find_element(By.TAG_NAME, "img").get_attribute("src")
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
 
-            products.append({
+    results = {}
+
+    for product in soup.find_all("div", class_="product-card"):
+        try:
+            name = product.find("div", class_="product-card__title").text.strip()
+            price = product.find("div", class_="product-price").text.strip()
+            link = "https://www.nike.com" + product.find("a")["href"]
+            image = product.find("img")["src"] if product.find("img") else ""
+
+            results[name] = {
                 "name": name,
-                "store": "Nike",
-                "price": float(price),
-                "link": link,
                 "image": image,
-            })
+                "price": float(price.replace("$", "").replace(",", "")),
+                "link": link,
+                "promo": None
+            }
         except:
             continue
 
-    driver.quit()
-    return products
+    return results
