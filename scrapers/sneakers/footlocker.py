@@ -24,22 +24,23 @@ def scrape_footlocker():
 
         for deal in soup.find_all("div", class_="ProductCard"):
             try:
-                name = deal.find("p", 
-class_="ProductCard-name").text.strip()
-                sale_price = deal.find("span", 
-class_="ProductPrice").text.strip().replace("$", "")
-                regular_price_elem = deal.find("span", 
-class_="ProductPrice-original")
-                regular_price = 
-regular_price_elem.text.strip().replace("$", "") if regular_price_elem else 
-sale_price
-                link = "https://www.footlocker.com" + 
-deal.find("a")["href"]
-                image_elem = deal.find("img")
+                name_elem = deal.find("p", class_="ProductCard-name")
+                sale_price_elem = deal.find("span", class_="ProductPrice")
+                regular_price_elem = deal.find("span", class_="ProductPrice-original")
+                link_elem = deal.find("a", class_="ProductCard-link")
+                image_elem = deal.find("img", class_="ProductCard-image")
+
+                if not name_elem or not sale_price_elem or not link_elem:
+                    continue  # Skip if essential elements are missing
+
+                name = name_elem.text.strip()
+                sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "")
+                regular_price = regular_price_elem.text.strip().replace("$", "").replace(",", "") if regular_price_elem else sale_price
+                link = "https://www.footlocker.com" + link_elem["href"]
                 image = image_elem["src"] if image_elem else ""
 
-                final_price, promo = apply_promo_code(float(sale_price), 
-None)
+                # Apply promo codes (if applicable)
+                final_price, promo = apply_promo_code(float(sale_price), None)
 
                 products[name] = {
                     "name": name,
@@ -62,4 +63,3 @@ None)
 
     finally:
         driver.quit()
-
