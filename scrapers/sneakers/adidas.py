@@ -13,17 +13,17 @@ def scrape_adidas():
 
     try:
         driver.get(url)
-        time.sleep(5)
+        time.sleep(5)  # ✅ Let the page load
 
-        # Scroll to load more products
-        for _ in range(3):
+        # ✅ Scroll multiple times to load more products
+        for _ in range(5):
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
-            time.sleep(2)
+            time.sleep(3)
 
         soup = BeautifulSoup(driver.page_source, "html.parser")
         products = {}
 
-        # ✅ Updated class names for Adidas' new website structure
+        # ✅ Updated Adidas class names for products
         for deal in soup.find_all("div", class_="glass-product-card"):
             try:
                 name_elem = deal.find("div", class_="glass-product-card__title")
@@ -41,7 +41,7 @@ def scrape_adidas():
                 link = "https://www.adidas.com" + link_elem["href"]
                 image = image_elem["src"] if image_elem else ""
 
-                # Apply promo codes (if applicable)
+                # ✅ Apply promo codes (if applicable)
                 final_price, promo = apply_promo_code(float(sale_price), None)
 
                 products[name] = {
