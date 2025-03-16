@@ -10,11 +10,12 @@ def scrape_adidas():
     print("🔍 Scraping Adidas Sales...")
     driver = get_selenium_driver()
     url = "https://www.adidas.com/us/sale"
-    
+
     try:
         driver.get(url)
         time.sleep(5)
 
+        # Scroll to load more products
         for _ in range(3):
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
             time.sleep(2)
@@ -22,13 +23,14 @@ def scrape_adidas():
         soup = BeautifulSoup(driver.page_source, "html.parser")
         products = {}
 
+        # ✅ Updated class names for Adidas' new website structure
         for deal in soup.find_all("div", class_="glass-product-card"):
             try:
                 name_elem = deal.find("div", class_="glass-product-card__title")
-                sale_price_elem = deal.find("div", class_="gl-price-item--sale")
-                regular_price_elem = deal.find("div", class_="gl-price-item--crossed")
+                sale_price_elem = deal.find("div", class_="gl-price-item gl-price-item--sale")
+                regular_price_elem = deal.find("div", class_="gl-price-item gl-price-item--crossed")
                 link_elem = deal.find("a", class_="glass-product-card__assets-link")
-                image_elem = deal.find("img")
+                image_elem = deal.find("img", class_="glass-product-card__image")
 
                 if not name_elem or not sale_price_elem or not link_elem:
                     continue  # Skip if essential elements are missing
