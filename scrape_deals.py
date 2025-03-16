@@ -8,7 +8,7 @@ from scrapers.sneakers.dicks import scrape_dicks
 from scrapers.sneakers.goat import scrape_goat
 from scrapers.sneakers.stockx import scrape_stockx
 
-# **Targeted sneaker searches**
+# **Sneaker models to search**
 SNEAKER_QUERIES = [
     "Nike Air Max 1",
     "Nike Air Max 90",
@@ -18,7 +18,7 @@ SNEAKER_QUERIES = [
     "Yeezy Boost 350"
 ]
 
-# **List of all scrapers**
+# **Updated scraper dictionary**
 SCRAPERS = {
     "Nike": scrape_nike,
     "Adidas": scrape_adidas,
@@ -41,8 +41,8 @@ for query in SNEAKER_QUERIES:
 
         try:
             results = scraper(query)  # Call scraper function with query
-            
-            if isinstance(results, dict) and results:  # Ensure it's a dictionary and not empty
+
+            if isinstance(results, dict) and results:  # Ensure valid dictionary response
                 for product_name, product_data in results.items():
                     if product_name not in all_deals:
                         all_deals[product_name] = {
