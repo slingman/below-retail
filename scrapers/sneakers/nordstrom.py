@@ -1,28 +1,36 @@
-from utils.selenium_setup import get_selenium_driver
-from bs4 import BeautifulSoup
 import time
+import json
+from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+from utils.selenium_setup import get_selenium_driver
 
-def scrape_nordstrom():
-    print("🔍 Scraping Nordstrom...")
+def scrape_nordstrom(search_term):
+    print(f"🔍 Searching Nordstrom for {search_term}...")
     driver = get_selenium_driver()
-    driver.get("https://www.nordstrom.com/browse/men/shoes/sale")
-    time.sleep(5)  # Allow JavaScript to load
+    
+    search_url = f"https://www.nordstrom.com/sr?keyword={search_term.replace(' ', '+')}"
+    driver.get(search_url)
+    time.sleep(5)  # Allow JS to load
     
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
+    products = {}
     
-    deals = {}
-    for product in soup.find_all("div", class_="product-item"):  # Adjust class if needed
+    for item in soup.find_all("article", class_="yR1fY"):
         try:
-            name = product.find("span", class_="product-title").text.strip()
-            price = float(product.find("span", class_="sale-price").text.replace("$", "").strip())
-            link = "https://www.nordstrom.com" + product.find("a")["href"]
-            image = product.find("img")["src"]
-            
-            if name not in deals:
-                deals[name] = {"name": name, "image": image, "prices": []}
-            deals[name]["prices"].append({"store": "Nordstrom", "price": price, "link": link, "promo": None})
-        except Exception as e:
+            name = item.find("h3", class_="UZDE8").text.strip()
+            link = "https://www.nordstrom.com" + item.find("a", class_="x0Tbd")["href"]
+            price = item.find("span", class_="nTrW1").text.strip()
+            image = item.find("img")["src"] if item.find("img") else ""
+
+            products[name] = {
+                "name": name,
+                "price": price,
+                "link": link,
+                "image": image,
+                "store": "Nordstrom"
+            }
+        except Exception:
             continue
     
-    return deals
+    driver.quit()
+    return products
