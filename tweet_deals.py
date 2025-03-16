@@ -40,7 +40,7 @@ for deal in deals:
                 price = float(price_info["price"])
                 regular_price = float(deal.get("regular_price", price))
                 discount = ((regular_price - price) / regular_price) * 100 if regular_price > price else 0
-                if discount >= 10:
+                if discount >= 0: # Allow all deals, even if there's no discount
                     valid_deals.append(deal)
                     break
             except ValueError:
