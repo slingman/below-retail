@@ -1,38 +1,36 @@
 import time
-import requests
+import json
 from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
 from utils.selenium_setup import get_selenium_driver
 
-STOCKX_SEARCH_URL = "https://stockx.com/search?s={query}"
-
-def scrape_stockx(query):
-    print(f"🔍 Searching StockX for {query}...")
-
+def scrape_stockx(search_term):
+    print(f"🔍 Searching StockX for {search_term}...")
     driver = get_selenium_driver()
-    search_url = STOCKX_SEARCH_URL.format(query=query.replace(" ", "%20"))
+    
+    search_url = f"https://stockx.com/search?s={search_term.replace(' ', '%20')}"
     driver.get(search_url)
-    time.sleep(5)
+    time.sleep(5)  # Allow JS to load
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
+    products = {}
 
-    results = {}
-
-    for product in soup.find_all("div", class_="tile"):
+    for item in soup.find_all("div", class_="css-1oxq7lt"):
         try:
-            name = product.find("p", class_="title").text.strip()
-            price = product.find("div", class_="primary").text.strip().replace("$", "")
-            link = "https://stockx.com" + product.find("a")["href"]
-            image = product.find("img")["src"] if product.find("img") else ""
+            name = item.find("p", class_="css-3lpefb").text.strip()
+            link = "https://stockx.com" + item.find("a")["href"]
+            price = item.find("div", class_="css-16my406").text.strip()
+            image = item.find("img")["src"] if item.find("img") else ""
 
-            results[name] = {
+            products[name] = {
                 "name": name,
-                "image": image,
-                "price": float(price.replace(",", "")),
+                "price": price,
                 "link": link,
-                "promo": None
+                "image": image,
+                "store": "StockX"
             }
-        except:
+        except Exception:
             continue
-
-    return results
+    
+    driver.quit()
+    return products
