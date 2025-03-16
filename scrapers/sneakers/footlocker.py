@@ -10,23 +10,24 @@ def scrape_footlocker():
     print("🔍 Scraping Foot Locker Sales...")
     driver = get_selenium_driver()
     url = "https://www.footlocker.com/sale"
-    
+
     try:
         driver.get(url)
         time.sleep(5)
 
-        for _ in range(3):
+        for _ in range(3):  # Scroll down to load more products
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
             time.sleep(2)
 
         soup = BeautifulSoup(driver.page_source, "html.parser")
         products = {}
 
+        # ✅ Updated class names for Foot Locker's new site structure
         for deal in soup.find_all("div", class_="ProductCard"):
             try:
                 name_elem = deal.find("p", class_="ProductCard-name")
-                sale_price_elem = deal.find("span", class_="ProductPrice")
-                regular_price_elem = deal.find("span", class_="ProductPrice-original")
+                sale_price_elem = deal.find("div", class_="ProductPrice-selling")
+                regular_price_elem = deal.find("div", class_="ProductPrice-original")
                 link_elem = deal.find("a", class_="ProductCard-link")
                 image_elem = deal.find("img", class_="ProductCard-image")
 
