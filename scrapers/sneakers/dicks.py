@@ -1,28 +1,36 @@
-from utils.selenium_setup import get_selenium_driver
-from bs4 import BeautifulSoup
 import time
+import json
+from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+from utils.selenium_setup import get_selenium_driver
 
-def scrape_dicks():
-    print("🔍 Scraping Dick's Sporting Goods...")
+def scrape_dicks(search_term):
+    print(f"🔍 Searching Dick's Sporting Goods for {search_term}...")
     driver = get_selenium_driver()
-    driver.get("https://www.dickssportinggoods.com/f/mens-shoe-sale")
-    time.sleep(5)  # Allow JavaScript to load
     
+    search_url = f"https://www.dickssportinggoods.com/search/SearchDisplay?searchTerm={search_term.replace(' ', '%20')}"
+    driver.get(search_url)
+    time.sleep(5)  # Allow JS to load
+
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
-    
-    deals = {}
-    for product in soup.find_all("div", class_="product-card"):  # Adjust class if needed
+    products = {}
+
+    for item in soup.find_all("div", class_="product"):
         try:
-            name = product.find("a", class_="product-title").text.strip()
-            price = float(product.find("span", class_="sale-price").text.replace("$", "").strip())
-            link = "https://www.dickssportinggoods.com" + product.find("a")["href"]
-            image = product.find("img")["src"]
-            
-            if name not in deals:
-                deals[name] = {"name": name, "image": image, "prices": []}
-            deals[name]["prices"].append({"store": "Dick's Sporting Goods", "price": price, "link": link, "promo": None})
-        except Exception as e:
+            name = item.find("h2", class_="product-title").text.strip()
+            link = "https://www.dickssportinggoods.com" + item.find("a")["href"]
+            price = item.find("span", class_="final-price").text.strip()
+            image = item.find("img")["src"] if item.find("img") else ""
+
+            products[name] = {
+                "name": name,
+                "price": price,
+                "link": link,
+                "image": image,
+                "store": "Dick's Sporting Goods"
+            }
+        except Exception:
             continue
     
-    return deals
+    driver.quit()
+    return products
