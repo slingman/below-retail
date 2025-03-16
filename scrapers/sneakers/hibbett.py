@@ -1,38 +1,36 @@
 import time
-import requests
+import json
 from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
 from utils.selenium_setup import get_selenium_driver
 
-HIBBETT_SEARCH_URL = "https://www.hibbett.com/search?q={query}"
-
-def scrape_hibbett(query):
-    print(f"🔍 Searching Hibbett for {query}...")
-
+def scrape_hibbett(search_term):
+    print(f"🔍 Searching Hibbett for {search_term}...")
     driver = get_selenium_driver()
-    search_url = HIBBETT_SEARCH_URL.format(query=query.replace(" ", "%20"))
+    
+    search_url = f"https://www.hibbett.com/search?q={search_term.replace(' ', '+')}"
     driver.get(search_url)
-    time.sleep(5)
+    time.sleep(5)  # Allow JS to load
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
+    products = {}
 
-    results = {}
-
-    for product in soup.find_all("div", class_="product-tile"):
+    for item in soup.find_all("div", class_="product-tile"):
         try:
-            name = product.find("a", class_="product-title").text.strip()
-            price = product.find("span", class_="sales").text.strip().replace("$", "")
-            link = "https://www.hibbett.com" + product.find("a")["href"]
-            image = product.find("img")["src"] if product.find("img") else ""
+            name = item.find("a", class_="link-name").text.strip()
+            link = "https://www.hibbett.com" + item.find("a", class_="link-name")["href"]
+            price = item.find("span", class_="sales").text.strip()
+            image = item.find("img")["src"] if item.find("img") else ""
 
-            results[name] = {
+            products[name] = {
                 "name": name,
-                "image": image,
-                "price": float(price.replace(",", "")),
+                "price": price,
                 "link": link,
-                "promo": None
+                "image": image,
+                "store": "Hibbett Sports"
             }
-        except:
+        except Exception:
             continue
-
-    return results
+    
+    driver.quit()
+    return products
