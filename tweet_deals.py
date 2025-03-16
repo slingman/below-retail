@@ -32,7 +32,7 @@ with open("deals.json", "r") as f:
 
 # ✅ Tweet Multiple Deals Per Run
 if deals:
-    num_tweets = min(5, len(deals))  # Change "5" to any number you want
+    num_tweets = min(5, len(deals))  # Change this to tweet more or fewer deals
     random_deals = random.sample(list(deals.values()), num_tweets)
 
     for deal in random_deals:
@@ -42,22 +42,25 @@ if deals:
         best_link = best_store["link"]
         promo_code = best_store.get("promo", None)
 
-        # Determine regular price and calculate discount (if available)
+        # Find the highest price from other stores for comparison
+        other_stores = [
+            (price_info["store"], float(price_info["price"]))
+            for price_info in deal["prices"] if price_info["store"] != best_store_name
+        ]
+        highest_store, highest_price = max(other_stores, key=lambda x: x[1], default=(None, None))
+
+        # Determine discount percentage
         try:
             regular_price = float(deal.get("regular_price", best_price))
             discount = ((regular_price - best_price) / regular_price) * 100 if regular_price > best_price else 0
         except ValueError:
             discount = 0  
 
-        # Format tweet
+        # ✅ Format tweet
         tweet_text = f"🔥 {deal['name']} is cheapest at {best_store_name} for ${best_price:.2f}!\n\n"
 
-        other_prices = [
-            f"{price_info['store']} - ${price_info['price']:.2f}"
-            for price_info in deal["prices"] if price_info["store"] != best_store_name
-        ]
-        if other_prices:
-            tweet_text += "Other prices:\n" + "\n".join(other_prices) + "\n\n"
+        if highest_store:
+            tweet_text += f"⚡ Compared at {highest_store} for ${highest_price:.2f}!\n\n"
 
         if discount > 0:
             tweet_text += f"💰 {discount:.0f}% OFF!\n\n"
