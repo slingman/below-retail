@@ -1,41 +1,32 @@
-import requests
-from bs4 import BeautifulSoup
+import time
+from selenium.webdriver.common.by import By
+from utils.selenium_setup import get_selenium_driver
 
-def scrape_nike(model):
-    print(f"🔍 Searching Nike for {model}...")
-    base_url = "https://www.nike.com/w?q="
-    search_url = f"{base_url}{model.replace(' ', '%20')}"  # Format search query
+def scrape_nike(query):
+    driver = get_selenium_driver()
+    search_url = f"https://www.nike.com/w?q={query.replace(' ', '%20')}"
+    driver.get(search_url)
+    time.sleep(5)
+
+    products = []
+    items = driver.find_elements(By.CLASS_NAME, "product-card")
     
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    }
-    
-    try:
-        response = requests.get(search_url, headers=headers)
-        if response.status_code != 200:
-            print(f"❌ Failed to fetch Nike search results for {model}")
-            return {}
+    for item in items:
+        try:
+            name = item.find_element(By.CLASS_NAME, "product-card__title").text.strip()
+            price = item.find_element(By.CLASS_NAME, "product-price").text.strip().replace('$', '')
+            link = item.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
+            image = item.find_element(By.TAG_NAME, "img").get_attribute("src")
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        deals = {}
+            products.append({
+                "name": name,
+                "store": "Nike",
+                "price": float(price),
+                "link": link,
+                "image": image,
+            })
+        except:
+            continue
 
-        for product in soup.find_all("div", class_="product-card"):
-            try:
-                name = product.find("div", class_="product-card__title").text.strip()
-                price = product.find("div", class_="product-price").text.strip()
-                link = "https://www.nike.com" + product.find("a")["href"]
-                image = product.find("img")["src"] if product.find("img") else ""
-
-                if model.lower() in name.lower():  # Ensure it matches the searched model
-                    deals[name] = {
-                        "name": name,
-                        "image": image,
-                        "prices": [{"store": "Nike", "price": price, "link": link}]
-                    }
-            except:
-                continue
-
-        return deals
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Error fetching Nike search: {e}")
-        return {}
+    driver.quit()
+    return products
