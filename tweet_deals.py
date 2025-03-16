@@ -33,7 +33,7 @@ with open("deals.json", "r") as f:
 
 # ✅ Tweet Multiple Deals Per Run (Limited to 3)
 if deals:
-    num_tweets = min(3, len(deals))  # 🔹 Now tweets max 3 deals per run
+    num_tweets = min(1, len(deals))  # Tweets 1 deal per run (safer)
     random_deals = random.sample(list(deals.values()), num_tweets)
 
     for deal in random_deals:
