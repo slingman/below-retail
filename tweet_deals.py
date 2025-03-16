@@ -30,25 +30,9 @@ api = tweepy.API(auth)
 with open("deals.json", "r") as f:
     deals = json.load(f)
 
-# ✅ Filter deals that are at least 10% off
-valid_deals = []
-for deal in deals:
-    if "prices" in deal:
-        best_price = None
-        for price_info in deal["prices"]:
-            try:
-                price = float(price_info["price"])
-                regular_price = float(deal.get("regular_price", price))
-                discount = ((regular_price - price) / regular_price) * 100 if regular_price > price else 0
-                if discount >= 0: # Allow all deals, even if there's no discount
-                    valid_deals.append(deal)
-                    break
-            except ValueError:
-                continue  # Skip if prices are not properly formatted
-
-# ✅ Pick a random valid deal to tweet
-if valid_deals:
-    deal = random.choice(valid_deals)
+# ✅ Pick a random deal to tweet
+if deals:
+    deal = random.choice(list(deals.values()))
 
     # ✅ Identify the cheapest price among stores
     best_store = min(deal["prices"], key=lambda x: float(x["price"]))
@@ -57,23 +41,34 @@ if valid_deals:
     best_link = best_store["link"]
     promo_code = best_store.get("promo", None)
 
+    # ✅ Determine regular price and calculate discount (if available)
+    try:
+        regular_price = float(deal.get("regular_price", best_price))
+        discount = ((regular_price - best_price) / regular_price) * 100 if regular_price > best_price else 0
+    except ValueError:
+        discount = 0  # If there's no valid regular price, assume no discount
+
     # ✅ Format tweet
-    tweet_text = f"🔥 {deal['name']} is cheapest at {best_store_name} for ${best_price}!\n\n"
+    tweet_text = f"🔥 {deal['name']} is cheapest at {best_store_name} for ${best_price:.2f}!\n\n"
 
     # List other store prices
     other_prices = [
-        f"{price_info['store']} - ${price_info['price']}"
+        f"{price_info['store']} - ${price_info['price']:.2f}"
         for price_info in deal["prices"] if price_info["store"] != best_store_name
     ]
     if other_prices:
         tweet_text += "Other prices:\n" + "\n".join(other_prices) + "\n\n"
 
+    # Include discount percentage if applicable
+    if discount > 0:
+        tweet_text += f"💰 {discount:.0f}% OFF!\n\n"
+
     # Include promo code if available
     if promo_code:
-        tweet_text += f"💰 Use promo code: {promo_code}\n\n"
+        tweet_text += f"💳 Use promo code: {promo_code}\n\n"
 
     # Add final link
-    tweet_text += f"Buy here: {best_link} #BestDeal #Shopping"
+    tweet_text += f"🔗 Buy here: {best_link} #BestDeal #Shopping"
 
     # ✅ Download the product image (if available)
     image_url = deal.get("image", "")
@@ -108,4 +103,4 @@ if valid_deals:
         print("❌ No valid image found. Posting text-only tweet.")
         client.create_tweet(text=tweet_text)
 else:
-    print("❌ No good deals (10%+ off) to tweet.")
+    print("❌ No deals found to tweet.")
