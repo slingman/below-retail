@@ -1,50 +1,38 @@
 import time
+import requests
 from bs4 import BeautifulSoup
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from utils.selenium_setup import get_selenium_driver
 
-def scrape_stockx():
-    """Scrapes StockX for sneaker prices."""
-    print("🔍 Scraping StockX Sneakers...")
+STOCKX_SEARCH_URL = "https://stockx.com/search?s={query}"
+
+def scrape_stockx(query):
+    print(f"🔍 Searching StockX for {query}...")
+
     driver = get_selenium_driver()
-    url = "https://stockx.com/sneakers"
-    
-    try:
-        driver.get(url)
-        time.sleep(5)
+    search_url = STOCKX_SEARCH_URL.format(query=query.replace(" ", "%20"))
+    driver.get(search_url)
+    time.sleep(5)
 
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        products = {}
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
 
-        for deal in soup.find_all("div", class_="tile"):
-            try:
-                name = deal.find("div", class_="tile-title").text.strip()
-                sale_price = deal.find("div", 
-class_="tile-price").text.strip().replace("$", "")
-                link = "https://stockx.com" + deal.find("a")["href"]
-                image_elem = deal.find("img")
-                image = image_elem["src"] if image_elem else ""
+    results = {}
 
-                products[name] = {
-                    "name": name,
-                    "image": image,
-                    "prices": [{
-                        "store": "StockX",
-                        "price": float(sale_price),
-                        "link": link,
-                        "promo": None
-                    }]
-                }
-            except Exception:
-                continue
+    for product in soup.find_all("div", class_="tile"):
+        try:
+            name = product.find("p", class_="title").text.strip()
+            price = product.find("div", class_="primary").text.strip().replace("$", "")
+            link = "https://stockx.com" + product.find("a")["href"]
+            image = product.find("img")["src"] if product.find("img") else ""
 
-        return products
+            results[name] = {
+                "name": name,
+                "image": image,
+                "price": float(price.replace(",", "")),
+                "link": link,
+                "promo": None
+            }
+        except:
+            continue
 
-    except Exception as e:
-        print(f"❌ StockX Scraper Error: {e}")
-        return {}
-
-    finally:
-        driver.quit()
-
+    return results
