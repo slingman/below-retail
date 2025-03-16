@@ -13,34 +13,34 @@ def scrape_goat():
 
     try:
         driver.get(url)
-        time.sleep(5)  # ✅ Let the page fully load
+        time.sleep(7)  # ✅ Let the page fully load (GOAT is JavaScript-heavy)
 
-        # ✅ Scroll multiple times to load more products
-        for _ in range(5):
+        # ✅ Scroll down slowly to force content load
+        for _ in range(8):
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
-            time.sleep(3)
+            time.sleep(2)
 
         soup = BeautifulSoup(driver.page_source, "html.parser")
         products = {}
 
-        # ✅ Updated GOAT class names for product cards
+        # ✅ Updated selectors for GOAT's new structure
         for deal in soup.find_all("div", class_="GridCell"):
             try:
-                name_elem = deal.find("div", class_="ProductCard__title")
-                sale_price_elem = deal.find("div", class_="ProductCard__price")
+                name_elem = deal.find("p", class_="ProductCard__title")
+                price_elem = deal.find("span", class_="ProductCard__price")
                 link_elem = deal.find("a", class_="ProductCard__link")
                 image_elem = deal.find("img", class_="ProductCard__image")
 
-                if not name_elem or not sale_price_elem or not link_elem:
+                if not name_elem or not price_elem or not link_elem:
                     continue  # Skip if essential elements are missing
 
                 name = name_elem.text.strip()
-                sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "")
+                price = price_elem.text.strip().replace("$", "").replace(",", "")
                 link = "https://www.goat.com" + link_elem["href"]
                 image = image_elem["src"] if image_elem else ""
 
                 # ✅ Apply promo codes (if applicable)
-                final_price, promo = apply_promo_code(float(sale_price), None)
+                final_price, promo = apply_promo_code(float(price), None)
 
                 products[name] = {
                     "name": name,
