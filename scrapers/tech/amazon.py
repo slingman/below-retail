@@ -22,34 +22,22 @@ def scrape_amazon():
         soup = BeautifulSoup(driver.page_source, "html.parser")
         products = {}
 
-        for deal in soup.find_all("div", 
-class_="DealCard-module__dealCardContent_3pCEQ"):
+        for deal in soup.find_all("div", class_="DealCard-module__dealCardContent_3pCEQ"):
             try:
-                name_elem = deal.find("span", 
-class_="DealCard-module__title_2aJjw")
+                name_elem = deal.find("span", class_="DealCard-module__title_2aJjw")
                 sale_price_elem = deal.find("span", class_="a-price-whole")
-                regular_price_elem = deal.find("span", class_="a-price 
-a-text-price")
+                regular_price_elem = deal.find("span", class_="a-price a-text-price")
 
                 if not name_elem or not sale_price_elem:
-                    continue  # Skip if required elements are missing
+                    continue
 
                 name = name_elem.text.strip()
-                sale_price = sale_price_elem.text.strip().replace("$", 
-"").replace(",", "")
-                regular_price = 
-regular_price_elem.text.strip().replace("$", "").replace(",", "") if 
-regular_price_elem else sale_price
+                sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "")
+                regular_price = regular_price_elem.text.strip().replace("$", "").replace(",", "") if regular_price_elem else sale_price
+                link = "https://www.amazon.com" + deal.find("a")["href"]
+                image = deal.find("img")["src"] if deal.find("img") else ""
 
-                link_elem = deal.find("a", class_="a-link-normal")
-                link = "https://www.amazon.com" + link_elem["href"] if 
-link_elem else "#"
-
-                image_elem = deal.find("img")
-                image = image_elem["src"] if image_elem else ""
-
-                final_price, promo = apply_promo_code(float(sale_price), 
-None)
+                final_price, promo = apply_promo_code(float(sale_price), None)
 
                 products[name] = {
                     "name": name,
@@ -72,4 +60,3 @@ None)
 
     finally:
         driver.quit()
-
