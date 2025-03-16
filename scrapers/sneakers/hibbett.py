@@ -1,28 +1,41 @@
-from utils.selenium_setup import get_selenium_driver
+import requests
 from bs4 import BeautifulSoup
-import time
 
-def scrape_hibbett():
-    print("🔍 Scraping Hibbett Sports...")
-    driver = get_selenium_driver()
-    driver.get("https://www.hibbett.com/sale/mens/shoes/")
-    time.sleep(5)  # Allow JavaScript to load
+def scrape_hibbett(model):
+    print(f"🔍 Searching Hibbett for {model}...")
+    base_url = "https://www.hibbett.com/catalog/search_cmd/"
+    search_url = f"{base_url}{model.replace(' ', '+')}"
     
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+    }
     
-    deals = {}
-    for product in soup.find_all("div", class_="product-tile"):  # Adjust class if needed
-        try:
-            name = product.find("a", class_="link").text.strip()
-            price = float(product.find("span", class_="sales").text.replace("$", "").strip())
-            link = "https://www.hibbett.com" + product.find("a", class_="link")["href"]
-            image = product.find("img")["src"]
-            
-            if name not in deals:
-                deals[name] = {"name": name, "image": image, "prices": []}
-            deals[name]["prices"].append({"store": "Hibbett", "price": price, "link": link, "promo": None})
-        except Exception as e:
-            continue
-    
-    return deals
+    try:
+        response = requests.get(search_url, headers=headers)
+        if response.status_code != 200:
+            print(f"❌ Failed to fetch Hibbett search results for {model}")
+            return {}
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        deals = {}
+
+        for product in soup.find_all("div", class_="product-tile"):
+            try:
+                name = product.find("div", class_="product-name").text.strip()
+                price = product.find("span", class_="sales").text.strip()
+                link = "https://www.hibbett.com" + product.find("a")["href"]
+                image = product.find("img")["src"] if product.find("img") else ""
+
+                if model.lower() in name.lower():
+                    deals[name] = {
+                        "name": name,
+                        "image": image,
+                        "prices": [{"store": "Hibbett", "price": price, "link": link}]
+                    }
+            except:
+                continue
+
+        return deals
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error fetching Hibbett search: {e}")
+        return {}
