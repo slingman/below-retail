@@ -24,21 +24,23 @@ def scrape_adidas():
 
         for deal in soup.find_all("div", class_="glass-product-card"):
             try:
-                name = deal.find("div", 
-class_="glass-product-card__title").text.strip()
-                sale_price = deal.find("div", 
-class_="gl-price-item--sale").text.strip().replace("$", "")
-                regular_price_elem = deal.find("div", 
-class_="gl-price-item--crossed")
-                regular_price = 
-regular_price_elem.text.strip().replace("$", "") if regular_price_elem else 
-sale_price
-                link = "https://www.adidas.com" + deal.find("a")["href"]
+                name_elem = deal.find("div", class_="glass-product-card__title")
+                sale_price_elem = deal.find("div", class_="gl-price-item--sale")
+                regular_price_elem = deal.find("div", class_="gl-price-item--crossed")
+                link_elem = deal.find("a", class_="glass-product-card__assets-link")
                 image_elem = deal.find("img")
+
+                if not name_elem or not sale_price_elem or not link_elem:
+                    continue  # Skip if essential elements are missing
+
+                name = name_elem.text.strip()
+                sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "")
+                regular_price = regular_price_elem.text.strip().replace("$", "").replace(",", "") if regular_price_elem else sale_price
+                link = "https://www.adidas.com" + link_elem["href"]
                 image = image_elem["src"] if image_elem else ""
 
-                final_price, promo = apply_promo_code(float(sale_price), 
-None)
+                # Apply promo codes (if applicable)
+                final_price, promo = apply_promo_code(float(sale_price), None)
 
                 products[name] = {
                     "name": name,
@@ -61,4 +63,3 @@ None)
 
     finally:
         driver.quit()
-
