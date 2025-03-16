@@ -1,5 +1,4 @@
 import json
-import time
 from scrapers.sneakers.nike import scrape_nike
 from scrapers.sneakers.adidas import scrape_adidas
 from scrapers.sneakers.footlocker import scrape_footlocker
@@ -9,8 +8,8 @@ from scrapers.sneakers.dicks import scrape_dicks
 from scrapers.sneakers.goat import scrape_goat
 from scrapers.sneakers.stockx import scrape_stockx
 
-# ✅ Define sneaker models to search for
-SNEAKER_MODELS = [
+# **Targeted sneaker searches**
+SNEAKER_QUERIES = [
     "Nike Air Max 1",
     "Nike Air Max 90",
     "Air Jordan 1",
@@ -19,33 +18,51 @@ SNEAKER_MODELS = [
     "Yeezy Boost 350"
 ]
 
-# ✅ Store all deals
+# **List of all scrapers**
+SCRAPERS = {
+    "Nike": scrape_nike,
+    "Adidas": scrape_adidas,
+    "Foot Locker": scrape_footlocker,
+    "Hibbett": scrape_hibbett,
+    "Nordstrom": scrape_nordstrom,
+    "Dick's Sporting Goods": scrape_dicks,
+    "GOAT": scrape_goat,
+    "StockX": scrape_stockx,
+}
+
+# **Store all scraped deals**
 all_deals = {}
 
-# ✅ Run scrapers for each sneaker model
-for model in SNEAKER_MODELS:
-    print(f"🔍 Searching for {model} across multiple stores...")
+for query in SNEAKER_QUERIES:
+    print(f"\n🔍 Searching for {query} across multiple stores...")
 
-    for scraper in [
-        scrape_nike, scrape_adidas, scrape_footlocker,
-        scrape_hibbett, scrape_nordstrom, scrape_dicks,
-        scrape_goat, scrape_stockx
-    ]:
+    for store, scraper in SCRAPERS.items():
+        print(f"🔍 Checking {store} for {query}...")
+
         try:
-            print(f"🔍 Checking {scraper.__name__.replace('scrape_', '').capitalize()} for {model}...")
-            store_deals = scraper(model)  # Pass the model to each scraper
+            results = scraper(query)  # Call scraper function with query
             
-            for product, details in store_deals.items():
-                if product not in all_deals:
-                    all_deals[product] = details
-                else:
-                    all_deals[product]["prices"].extend(details["prices"])
-
-            time.sleep(2)  # Prevent rate limits
+            if isinstance(results, dict) and results:  # Ensure it's a dictionary and not empty
+                for product_name, product_data in results.items():
+                    if product_name not in all_deals:
+                        all_deals[product_name] = {
+                            "name": product_name,
+                            "image": product_data["image"],
+                            "prices": []
+                        }
+                    all_deals[product_name]["prices"].append({
+                        "store": store,
+                        "price": product_data["price"],
+                        "link": product_data["link"],
+                        "promo": product_data.get("promo", None)
+                    })
+            else:
+                print(f"⚠️ No results found from {store} for {query}")
+        
         except Exception as e:
             print(f"❌ Error in {scraper.__name__}: {e}")
 
-# ✅ Save the scraped deals to `deals.json`
+# **Save deals to JSON**
 if all_deals:
     with open("deals.json", "w") as f:
         json.dump(all_deals, f, indent=4)
