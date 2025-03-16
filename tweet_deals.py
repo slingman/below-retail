@@ -33,24 +33,35 @@ with open("deals.json", "r") as f:
 
 # ✅ Tweet 1 Deal Per Run (Safer Rate Limits)
 if deals:
-    num_tweets = min(1, len(deals))  # 🔹 Now only tweets 1 deal per run
+    num_tweets = min(1, len(deals))  # 🔹 Tweets only 1 deal per run
     random_deals = random.sample(list(deals.values()), num_tweets)
 
     for deal in random_deals:
-        best_store = min(deal["prices"], key=lambda x: float(x["price"]))
+        prices = deal["prices"]
+        
+        # ✅ Ensure there are multiple store prices to compare
+        if len(prices) < 2:
+            print(f"⚠️ Only one store found for {deal['name']}, skipping comparison.")
+            continue  # Skip deals with only one store
+
+        # ✅ Find best & highest price
+        best_store = min(prices, key=lambda x: float(x["price"]))
+        highest_store = max(prices, key=lambda x: float(x["price"]))
+
         best_price = best_store["price"]
         best_store_name = best_store["store"]
         best_link = best_store["link"]
         promo_code = best_store.get("promo", None)
 
-        # Find the highest price from other stores for comparison
-        other_stores = [
-            (price_info["store"], float(price_info["price"]))
-            for price_info in deal["prices"] if price_info["store"] != best_store_name
-        ]
-        highest_store, highest_price = max(other_stores, key=lambda x: x[1], default=(None, None))
+        highest_price = highest_store["price"]
+        highest_store_name = highest_store["store"]
 
-        # Determine discount percentage
+        # ✅ Ensure we are comparing different stores
+        if best_store_name == highest_store_name:
+            print(f"⚠️ No other stores to compare for {deal['name']}, skipping comparison.")
+            continue  # Skip if only one store is available
+
+        # ✅ Calculate discount percentage
         try:
             regular_price = float(deal.get("regular_price", best_price))
             discount = ((regular_price - best_price) / regular_price) * 100 if regular_price > best_price else 0
@@ -60,8 +71,9 @@ if deals:
         # ✅ Format tweet
         tweet_text = f"🔥 {deal['name']} is cheapest at {best_store_name} for ${best_price:.2f}!\n\n"
 
-        if highest_store:
-            tweet_text += f"⚡ Compared at {highest_store} for ${highest_price:.2f}!\n\n"
+        # ✅ Add "Compared at" section if another store sells it for more
+        if highest_price > best_price:
+            tweet_text += f"⚡ Compared at {highest_store_name} for ${highest_price:.2f}!\n\n"
 
         if discount > 0:
             tweet_text += f"💰 {discount:.0f}% OFF!\n\n"
