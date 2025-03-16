@@ -3,6 +3,7 @@ import json
 import random
 import os
 import requests
+import time  # ✅ Add time module for delay
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
@@ -32,7 +33,7 @@ with open("deals.json", "r") as f:
 
 # ✅ Tweet Multiple Deals Per Run
 if deals:
-    num_tweets = min(5, len(deals))  # Change this to tweet more or fewer deals
+    num_tweets = min(5, len(deals))  # Adjust the number of deals to tweet
     random_deals = random.sample(list(deals.values()), num_tweets)
 
     for deal in random_deals:
@@ -99,5 +100,9 @@ if deals:
         else:
             print("❌ No valid image found. Posting text-only tweet.")
             client.create_tweet(text=tweet_text)
+
+        # ✅ Wait 30-60 seconds before tweeting the next deal
+        time.sleep(random.uniform(30, 60))
+
 else:
     print("❌ No deals found to tweet.")
