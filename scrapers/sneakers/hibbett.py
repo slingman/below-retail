@@ -1,41 +1,38 @@
+import time
 import requests
 from bs4 import BeautifulSoup
+from utils.selenium_setup import get_selenium_driver
 
-def scrape_hibbett(model):
-    print(f"🔍 Searching Hibbett for {model}...")
-    base_url = "https://www.hibbett.com/catalog/search_cmd/"
-    search_url = f"{base_url}{model.replace(' ', '+')}"
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    }
-    
-    try:
-        response = requests.get(search_url, headers=headers)
-        if response.status_code != 200:
-            print(f"❌ Failed to fetch Hibbett search results for {model}")
-            return {}
+HIBBETT_SEARCH_URL = "https://www.hibbett.com/search?q={query}"
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        deals = {}
+def scrape_hibbett(query):
+    print(f"🔍 Searching Hibbett for {query}...")
 
-        for product in soup.find_all("div", class_="product-tile"):
-            try:
-                name = product.find("div", class_="product-name").text.strip()
-                price = product.find("span", class_="sales").text.strip()
-                link = "https://www.hibbett.com" + product.find("a")["href"]
-                image = product.find("img")["src"] if product.find("img") else ""
+    driver = get_selenium_driver()
+    search_url = HIBBETT_SEARCH_URL.format(query=query.replace(" ", "%20"))
+    driver.get(search_url)
+    time.sleep(5)
 
-                if model.lower() in name.lower():
-                    deals[name] = {
-                        "name": name,
-                        "image": image,
-                        "prices": [{"store": "Hibbett", "price": price, "link": link}]
-                    }
-            except:
-                continue
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
 
-        return deals
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Error fetching Hibbett search: {e}")
-        return {}
+    results = {}
+
+    for product in soup.find_all("div", class_="product-tile"):
+        try:
+            name = product.find("a", class_="product-title").text.strip()
+            price = product.find("span", class_="sales").text.strip().replace("$", "")
+            link = "https://www.hibbett.com" + product.find("a")["href"]
+            image = product.find("img")["src"] if product.find("img") else ""
+
+            results[name] = {
+                "name": name,
+                "image": image,
+                "price": float(price.replace(",", "")),
+                "link": link,
+                "promo": None
+            }
+        except:
+            continue
+
+    return results
