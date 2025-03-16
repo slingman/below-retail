@@ -1,32 +1,38 @@
 import time
-from selenium.webdriver.common.by import By
+import requests
+from bs4 import BeautifulSoup
 from utils.selenium_setup import get_selenium_driver
 
+GOAT_SEARCH_URL = "https://www.goat.com/search?query={query}"
+
 def scrape_goat(query):
+    print(f"🔍 Searching GOAT for {query}...")
+
     driver = get_selenium_driver()
-    search_url = f"https://www.goat.com/search?query={query.replace(' ', '%20')}"
+    search_url = GOAT_SEARCH_URL.format(query=query.replace(" ", "%20"))
     driver.get(search_url)
     time.sleep(5)
 
-    products = []
-    items = driver.find_elements(By.CLASS_NAME, "GridProduct__wrapper")
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
 
-    for item in items:
+    results = {}
+
+    for product in soup.find_all("div", class_="GridProductCard"):
         try:
-            name = item.find_element(By.CLASS_NAME, "GridProduct__title").text.strip()
-            price = item.find_element(By.CLASS_NAME, "GridProduct__price").text.strip().replace('$', '')
-            link = item.find_element(By.TAG_NAME, "a").get_attribute("href")
-            image = item.find_element(By.TAG_NAME, "img").get_attribute("src")
+            name = product.find("div", class_="ProductName").text.strip()
+            price = product.find("div", class_="ProductPrice").text.strip().replace("$", "")
+            link = "https://www.goat.com" + product.find("a")["href"]
+            image = product.find("img")["src"] if product.find("img") else ""
 
-            products.append({
+            results[name] = {
                 "name": name,
-                "store": "GOAT",
-                "price": float(price),
-                "link": link,
                 "image": image,
-            })
+                "price": float(price.replace(",", "")),
+                "link": link,
+                "promo": None
+            }
         except:
             continue
 
-    driver.quit()
-    return products
+    return results
