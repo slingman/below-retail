@@ -22,34 +22,25 @@ def scrape_walmart():
         soup = BeautifulSoup(driver.page_source, "html.parser")
         products = {}
 
-        for deal in soup.find_all("div", 
-class_="search-result-gridview-item"):
+        for deal in soup.find_all("div", class_="search-result-gridview-item"):
             try:
                 name_elem = deal.find("a", class_="product-title-link")
-                sale_price_elem = deal.find("span", 
-class_="price-characteristic")
-                regular_price_elem = deal.find("span", 
-class_="price-mantle")
+                sale_price_elem = deal.find("span", class_="price-characteristic")
+                regular_price_elem = deal.find("span", class_="price-mantle")
+                link_elem = deal.find("a", class_="product-title-link")
+                image_elem = deal.find("img")
 
-                if not name_elem or not sale_price_elem:
-                    continue  # Skip if required elements are missing
+                if not name_elem or not sale_price_elem or not link_elem:
+                    continue  # Skip if essential elements are missing
 
                 name = name_elem.text.strip()
-                sale_price = sale_price_elem.text.strip().replace("$", 
-"").replace(",", "")
-                regular_price = 
-regular_price_elem.text.strip().replace("$", "").replace(",", "") if 
-regular_price_elem else sale_price
-
-                link_elem = deal.find("a", class_="product-title-link")
-                link = "https://www.walmart.com" + link_elem["href"] if 
-link_elem else "#"
-
-                image_elem = deal.find("img")
+                sale_price = sale_price_elem.text.strip().replace("$", "").replace(",", "")
+                regular_price = regular_price_elem.text.strip().replace("$", "").replace(",", "") if regular_price_elem else sale_price
+                link = "https://www.walmart.com" + link_elem["href"]
                 image = image_elem["src"] if image_elem else ""
 
-                final_price, promo = apply_promo_code(float(sale_price), 
-None)
+                # Apply promo codes (if applicable)
+                final_price, promo = apply_promo_code(float(sale_price), None)
 
                 products[name] = {
                     "name": name,
@@ -72,4 +63,3 @@ None)
 
     finally:
         driver.quit()
-
