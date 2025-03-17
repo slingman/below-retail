@@ -13,7 +13,7 @@ def get_nike_deals():
     print("🔍 Searching Nike for Air Max 1...")
     deals = {}
 
-    driver = get_selenium_driver(headless=True)  # Headless for efficiency
+    driver = get_driver(headless=True)  # Headless for efficiency
 
     try:
         driver.get(NIKE_SEARCH_URL)
