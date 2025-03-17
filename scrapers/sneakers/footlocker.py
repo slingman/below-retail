@@ -17,12 +17,13 @@ def extract_supplier_sku(product_url, driver):
         driver.get(product_url)
         time.sleep(3)  # Give page time to load
 
-        # Look for Supplier-SKU
+        # Look for Supplier-SKU (ensure it's case-insensitive & allows spaces)
         try:
-            supplier_sku_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]")
-            supplier_sku = supplier_sku_element.find_element(By.XPATH, "./following-sibling::span").text.strip()
+            sku_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
+            supplier_sku = sku_element.text.strip()
             return supplier_sku
         except:
+            print(f"⚠️ Supplier-SKU not found on {product_url}")
             return None  # Skip if Supplier-SKU not found
 
     except Exception as e:
@@ -87,6 +88,11 @@ def get_footlocker_deals():
 
                 # Extract Style ID from Supplier-SKU on Product Page
                 style_id = extract_supplier_sku(product_url, driver)
+
+                # Ensure the `style_id` is extracted and stored
+                if not style_id:
+                    print(f"⚠️ No style ID found for {product_name}, skipping...")
+                    continue  # Skip products where we can't match to Nike
 
                 # Store deal information
                 deals.append({
