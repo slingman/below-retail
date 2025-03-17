@@ -50,7 +50,7 @@ def get_footlocker_deals():
 
                 # Construct the correct Foot Locker product page URL
                 if footlocker_product_id:
-                    product_url = f"https://www.footlocker.com/product/~/{footlocker_product_id}.html"
+                    product_url = f"https://www.footlocker.com/product/~/ {footlocker_product_id}.html"
                 else:
                     product_url = raw_product_url  # Fallback if extraction fails
 
@@ -81,18 +81,23 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(3)  # Allow time for the product page to load
 
-                # DEBUG: Print full product page content
-                full_page_text = driver.find_element(By.TAG_NAME, "body").text
-                print("\nDEBUG: Full product details text from Foot Locker:\n", full_page_text)
+                # DEBUG: Print full product page content to see if "Supplier-sku #" exists
+                full_page_text = driver.page_source
+                print("\nDEBUG: Full product page HTML from Foot Locker:\n", full_page_text[:1000])  # Print first 1000 characters
 
                 try:
-                    # Look for "Supplier-sku #:" on the page
-                    style_id_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
-                    style_id = style_id_element.text.strip()
-                    print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
+                    # Look for "Supplier-sku #" in the page text
+                    match = re.search(r"Supplier-sku #:\s*([\w-]+)", full_page_text)
+                    if match:
+                        style_id = match.group(1)
+                        print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
+                    else:
+                        style_id = None
+                        print(f"⚠️ Foot Locker Style ID Not Found for {product_name}.")
+
                 except Exception as e:
                     style_id = None
-                    print(f"⚠️ Foot Locker Style ID Not Found for {product_name}. Error: {e}")
+                    print(f"⚠️ Error extracting Foot Locker Style ID: {e}")
 
                 # Store deal information
                 deals.append({
