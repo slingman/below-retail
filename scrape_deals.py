@@ -1,63 +1,31 @@
-import json
 from scrapers.sneakers.nike import scrape_nike
 from scrapers.sneakers.footlocker import scrape_footlocker
-from scrapers.sneakers.adidas import scrape_adidas
-from scrapers.sneakers.hibbett import scrape_hibbett
-from scrapers.sneakers.nordstrom import scrape_nordstrom
-from scrapers.sneakers.dicks import scrape_dicks
-from scrapers.sneakers.goat import scrape_goat
-from scrapers.sneakers.stockx import scrape_stockx
-from scrapers.tech.amazon import scrape_amazon
-from scrapers.tech.bestbuy import scrape_bestbuy
-from scrapers.tech.walmart import scrape_walmart
+from utils.file_manager import save_deals
 
-# Search term (limited to Nike Air Max 1 for now)
-search_terms = ["Nike Air Max 1"]
+def main():
+    keyword = "Nike Air Max 1"
+    print(f"\n🔍 Searching for {keyword} at Nike and Foot Locker...\n")
 
-# Dictionary to store scraped deals
-deals = {}
+    # Scrape Nike
+    nike_deals = scrape_nike(keyword)
+    
+    # Scrape Foot Locker
+    footlocker_deals = scrape_footlocker(keyword)
 
-for search_term in search_terms:
-    print(f"\n🔍 Searching for {search_term} across relevant stores...")
+    # Combine and compare prices based on style ID
+    all_deals = {}
+    
+    for deal in nike_deals + footlocker_deals:
+        style_id = deal.get("style_id")
+        if style_id:
+            if style_id not in all_deals:
+                all_deals[style_id] = {"name": deal["name"], "image": deal["image"], "prices": []}
+            all_deals[style_id]["prices"].append({"store": deal["store"], "price": deal["price"], "link": deal["link"]})
 
-    scrapers = {
-        "Nike": scrape_nike,
-        "Foot Locker": scrape_footlocker,
-        "Hibbett": scrape_hibbett,
-        "Nordstrom": scrape_nordstrom,
-        "Dick's Sporting Goods": scrape_dicks,
-        "GOAT": scrape_goat,
-        "StockX": scrape_stockx
-    }
+    # Save deals to JSON
+    save_deals(all_deals)
+    
+    print(f"\n✅ Scraped {len(all_deals)} sneaker deals comparing Nike vs. Foot Locker!")
 
-    for store, scraper in scrapers.items():
-        print(f"🔍 Checking {store} for {search_term}...")
-        try:
-            results = scraper(search_term)
-            for product in results:
-                style_id = product.get("style_id")
-                if not style_id:
-                    continue
-
-                if style_id not in deals:
-                    deals[style_id] = {
-                        "name": product["name"],
-                        "image": product["image"],
-                        "style_id": style_id,
-                        "prices": []
-                    }
-
-                deals[style_id]["prices"].append({
-                    "store": store,
-                    "price": product["price"],
-                    "link": product["link"]
-                })
-
-        except Exception as e:
-            print(f"❌ Error in {store}: {e}")
-
-# Save scraped data to JSON
-with open("deals.json", "w") as f:
-    json.dump(deals, f, indent=4)
-
-print(f"\n✅ Scraped {len(deals)} sneaker deals across multiple stores!")
+if __name__ == "__main__":
+    main()
