@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
+import json
 
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
@@ -83,21 +84,33 @@ def get_footlocker_deals():
 
                 # DEBUG: Print full product page content to see if "Supplier-sku #" exists
                 full_page_text = driver.page_source
-                print("\nDEBUG: Full product page HTML from Foot Locker:\n", full_page_text[:1000])  # Print first 1000 characters
+                print("\nDEBUG: Full product page HTML from Foot Locker:\n", full_page_text[:2000])  # Print first 2000 characters
 
+                # First attempt: Regular expression to find "Supplier-sku #"
                 try:
-                    # Look for "Supplier-sku #" in the page text using regex
                     match = re.search(r"Supplier-sku\s*#:\s*([\w-]+)", full_page_text)
                     if match:
                         style_id = match.group(1).strip()
                         print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
                     else:
                         style_id = None
-                        print(f"⚠️ Foot Locker Style ID Not Found for {product_name}.")
+                        print(f"⚠️ Foot Locker Style ID Not Found via text scan.")
 
                 except Exception as e:
                     style_id = None
                     print(f"⚠️ Error extracting Foot Locker Style ID: {e}")
+
+                # Second attempt: Search for JSON metadata in the page
+                if style_id is None:
+                    try:
+                        json_match = re.search(r'window\.__PRELOADED_STATE__\s*=\s*({.*?});', full_page_text, re.DOTALL)
+                        if json_match:
+                            json_data = json.loads(json_match.group(1))
+                            style_id = json_data.get('product', {}).get('supplierSku', None)
+                            if style_id:
+                                print(f"✅ Extracted Style ID from JSON: {style_id}")
+                    except Exception as e:
+                        print(f"⚠️ Error extracting Supplier-sku # from JSON: {e}")
 
                 # Store deal information
                 deals.append({
