@@ -1,37 +1,21 @@
 import json
-import os
 
 def save_deals(deals, filename="deals.json"):
     """
-    Save the collected sneaker deals to a JSON file.
+    Saves scraped deals to a JSON file.
     
-    Args:
-        deals (dict): Dictionary of deals with style IDs as keys.
-        filename (str): The filename to save the data.
+    Ensures data is structured as a dictionary with style_id as keys.
     """
-    try:
-        with open(filename, "w") as file:
-            json.dump(deals, file, indent=4)
-        print(f"✅ Deals successfully saved to {filename}")
-    except Exception as e:
-        print(f"❌ Error saving deals: {e}")
+    structured_deals = {}
+    
+    for deal in deals:
+        style_id = deal.get("style_id")
+        if style_id:
+            structured_deals[style_id] = deal  # Save by style_id as key
+        else:
+            print(f"⚠️ Warning: Missing style_id for {deal.get('name', 'Unknown Product')}, skipping.")
 
-def load_deals(filename="deals.json"):
-    """
-    Load sneaker deals from a JSON file.
+    with open(filename, "w") as f:
+        json.dump(structured_deals, f, indent=4)
 
-    Args:
-        filename (str): The filename to load the data from.
-
-    Returns:
-        dict: Loaded deals data or an empty dictionary if the file doesn't exist.
-    """
-    if not os.path.exists(filename):
-        return {}
-
-    try:
-        with open(filename, "r") as file:
-            return json.load(file)
-    except Exception as e:
-        print(f"❌ Error loading deals: {e}")
-        return {}
+    print(f"\n✅ Deals successfully saved to {filename}")
