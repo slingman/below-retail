@@ -22,21 +22,29 @@ def get_nike_deals():
         time.sleep(5)
 
         wait = WebDriverWait(driver, 10)
+
+        # Updated selector for product cards
         product_cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.product-card")))
 
         deals = {}
 
         for card in product_cards:
             try:
+                # Extract product name
                 title_element = card.find_element(By.CSS_SELECTOR, "div.product-card__title")
                 product_name = title_element.text.strip()
 
+                # Extract price
                 price_element = card.find_element(By.CSS_SELECTOR, "div.product-price")
                 price_text = price_element.text.strip().replace("$", "").replace(",", "")
                 price = float(price_text) if price_text else None
 
-                link_element = card.find_element(By.CSS_SELECTOR, "a.product-card__link")
-                product_link = link_element.get_attribute("href")
+                # Extract product link (new approach)
+                try:
+                    link_element = card.find_element(By.TAG_NAME, "a")
+                    product_link = link_element.get_attribute("href")
+                except:
+                    product_link = None  # Fallback if link is missing
 
                 # Extract Style ID from URL
                 style_id = extract_style_id(product_link)
