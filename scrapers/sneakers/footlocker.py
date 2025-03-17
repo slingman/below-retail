@@ -16,21 +16,28 @@ deals = []
 for product in products:
     try:
         name = product.find_element(By.CSS_SELECTOR, ".ProductName-primary").text.strip()
-        price_final = product.find_element(By.CSS_SELECTOR, ".ProductPrice-final").text.strip()
 
-        # Check if there’s an original price (i.e., item is on sale)
+        # Try sale price first, then original price
         try:
-            price_original = product.find_element(By.CSS_SELECTOR, ".ProductPrice-original").text.strip()
+            price_final = product.find_element(By.CSS_SELECTOR, ".ProductPrice-final").text.strip()
         except:
-            price_original = price_final  # No sale, just use final price
+            try:
+                price_final = product.find_element(By.CSS_SELECTOR, ".ProductPrice-original").text.strip()
+            except:
+                price_final = "Price not found"  # Handle missing price gracefully
 
-        link = product.find_element(By.CSS_SELECTOR, ".ProductCard-link").get_attribute("href")
+        # Extract product link
+        link_element = product.find_element(By.CSS_SELECTOR, ".ProductCard-link")
+        link = link_element.get_attribute("href")
+
+        # Ensure the base URL is only added when necessary
+        if not link.startswith("https://www.footlocker.com"):
+            link = "https://www.footlocker.com" + link
 
         deals.append({
             "name": name,
             "price_final": price_final,
-            "price_original": price_original,
-            "link": "https://www.footlocker.com" + link,  # Ensure full URL
+            "link": link,
         })
 
     except Exception as e:
