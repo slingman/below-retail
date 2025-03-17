@@ -1,518 +1,535 @@
 {
-    "Nike Revolution 7": {
-        "name": "Nike Revolution 7",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/d71ffe7b-921c-4495-94cf-11c28bbf17b6/NIKE+REVOLUTION+7.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 48.97,
-                "link": "https://www.nike.com/t/revolution-7-mens-road-running-shoes-72BvdH/FB2207-100",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 52.97,
-                "link": "https://www.nike.com/t/revolution-7-womens-road-running-shoes-bt34Qq/FB2208-003",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Zoom Vomero 5": {
-        "name": "Nike Zoom Vomero 5",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/712d7d2e-2ce5-4c62-83af-c9f3a73c8ad2/NIKE+ZOOM+VOMERO+5.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 102.97,
-                "link": "https://www.nike.com/t/zoom-vomero-5-mens-shoes-Fm8pscV6/HV2529-200",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 120.97,
-                "link": "https://www.nike.com/t/zoom-vomero-5-womens-shoes-81TPKW/FN6742-300",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Flex Rep": {
-        "name": "Nike Flex Rep",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/26b0780d-07a4-4895-978b-7f12284ed202/M+NK+DF+FLEX+REP+SS+TOP.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 45.97,
-                "link": "https://www.nike.com/t/flex-rep-mens-dri-fit-short-sleeve-fitness-top-nv7W33/FN2979-247",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Totality": {
-        "name": "Nike Totality",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/7285ef60-704e-4999-9381-fa884dccf463/M+NK+DF+TOTALITY+KNIT+7IN+UL.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 24.97,
-                "link": "https://www.nike.com/t/totality-mens-dri-fit-7-unlined-versatile-shorts-M2Jb3W/FB4196-247",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Cortez Vintage Suede": {
-        "name": "Nike Cortez Vintage Suede",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/b22f2eb7-4105-4602-bf45-e4df0d531cf8/W+NIKE+CORTEZ+VNTG.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 85.97,
-                "link": "https://www.nike.com/t/cortez-vintage-suede-womens-shoes-nQSpJ7/FJ2530-301",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Sportswear Phoenix Fleece": {
-        "name": "Nike Sportswear Phoenix Fleece",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/00577c54-f34a-4059-bc2a-b55744754015/W+NSW+PHNX+FLC+QZ+CROP.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 56.97,
-                "link": "https://www.nike.com/t/sportswear-phoenix-fleece-womens-1-2-zip-cropped-sweatshirt-C4x5n9/DQ5767-338",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Sportswear Phoenix Plush": {
-        "name": "Nike Sportswear Phoenix Plush",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/df518729-dda5-4b48-aebd-3a6f80308fce/W+NSW+PHNX+PLSH+HR+PANT+WIDE.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 59.97,
-                "link": "https://www.nike.com/t/sportswear-phoenix-plush-womens-high-waisted-wide-leg-cozy-fleece-pants-33jK1s/FN3622-338",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Vomero 5": {
-        "name": "Nike Vomero 5",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/1fb6d254-82ce-4168-8674-7813cb86a1f9/VOMERO+5+%28GS%29.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 77.97,
-                "link": "https://www.nike.com/t/vomero-5-big-kids-shoes-h2xfKCUS/HF6998-102",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air VaporMax 2021 FK": {
-        "name": "Nike Air VaporMax 2021 FK",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/870053fc-75fb-4fcc-b426-a111a8d0048f/AIR+VAPORMAX+2021+FK+%28GS%29.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 133.97,
-                "link": "https://www.nike.com/t/air-vapormax-2021-fk-big-kids-shoes-5mzx3Z/DB1550-107",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Sportswear Tech Fleece": {
-        "name": "Nike Sportswear Tech Fleece",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/dcd8b709-b37a-4fa6-8ed1-32007e4cbb21/G+NSW+TCH+FLC+OVRSZD+HDY+-PD.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 78.97,
-                "link": "https://www.nike.com/t/sportswear-tech-fleece-girls-oversized-hoodie-GFnTBt/HF8188-133",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 67.97,
-                "link": "https://www.nike.com/t/sportswear-tech-fleece-girls-joggers-ZGpqwyVf/HV8698-133",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air VaporMax 2023 Flyknit": {
-        "name": "Nike Air VaporMax 2023 Flyknit",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/e1b12006-9de3-4560-abc7-e07c349ed950/AIR+VAPORMAX+2023+FK.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 168.97,
-                "link": "https://www.nike.com/t/air-vapormax-2023-flyknit-mens-shoes-vSm5p2/DV1678-001",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air Max 1 Essential": {
-        "name": "Nike Air Max 1 Essential",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/4554147c-7bcc-4e52-96f1-d60d67feaf39/NIKE+AIR+MAX+1+ESS.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 97.97,
-                "link": "https://www.nike.com/t/air-max-1-essential-mens-shoes-2C5sX2/FZ5808-101",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Primary Fleece": {
-        "name": "Nike Primary Fleece",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/36c50122-aa49-4c5e-9e5c-36cf9e931235/M+NK+DF+UV+PRIMARY+FZ+HOODIE.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 63.97,
-                "link": "https://www.nike.com/t/primary-fleece-mens-dri-fit-uv-full-zip-performance-hoodie-qcdG3l/FZ0967-370",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 56.97,
-                "link": "https://www.nike.com/t/primary-fleece-mens-dri-fit-uv-performance-joggers-RX4Mdm/FZ0975-370",
-                "promo": null
-            }
-        ]
-    },
-    "Nike V2K Run GORE-TEX": {
-        "name": "Nike V2K Run GORE-TEX",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/6e7bf9cd-6521-4e39-b722-fb872bec850b/W+NIKE+V2K+RUN+GTX.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 118.97,
-                "link": "https://www.nike.com/t/v2k-run-gore-tex-womens-waterproof-shoes-c0LGXZ/FZ2622-004",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Downshifter 13": {
-        "name": "Nike Downshifter 13",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/d5ecf6fa-cc41-4683-b029-02e5eb753048/W+NIKE+DOWNSHIFTER+13+WIDE.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 52.97,
-                "link": "https://www.nike.com/t/downshifter-13-womens-road-running-shoes-extra-wide-T2dDgQ/FZ3088-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Alate": {
-        "name": "Nike Alate",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/8809ffe6-7f47-49ea-9bca-8d3dcef1a6d4/W+NK+DF+ALATE+BRA+TANK.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 45.97,
-                "link": "https://www.nike.com/t/alate-womens-medium-support-padded-sports-bra-tank-top-2ccq5g/FN0543-010",
-                "promo": null
-            }
-        ]
-    },
-    "Nike One": {
-        "name": "Nike One",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/1e00cbb5-ff1d-490c-94df-05df5c6ddb75/W+NK+DF+ONE+HR+8IN+PKT+SHORT.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 29.97,
-                "link": "https://www.nike.com/t/one-womens-high-waisted-8-biker-shorts-with-pockets-XGEIiN9U/FZ6758-010",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Team Hustle D 10": {
-        "name": "Nike Team Hustle D 10",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/ec55bc14-7239-480a-99d2-a932527638fb/TEAM+HUSTLE+D+10+%28GS%29.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 39.97,
-                "link": "https://www.nike.com/t/team-hustle-d-10-big-kids-basketball-shoes-S5rFqj/CW6735-002",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 41.97,
-                "link": "https://www.nike.com/t/team-hustle-d-10-little-kids-shoes-Hj9X36/CW6736-002",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air": {
-        "name": "Nike Air",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/b5233343-51cc-4cb5-a704-a9f81d9a99d0/DNU+K+NK+AIR+TEE.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 17.97,
-                "link": "https://www.nike.com/t/air-big-kids-t-shirt-L30S07/FZ5174-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Multi": {
-        "name": "Nike Multi",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/83016a36-fcb0-4469-8c6d-963edd121487/B+NK+DF+MULTI%2B+SHORT+HBR.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 21.97,
-                "link": "https://www.nike.com/t/multi-big-kids-boys-dri-fit-graphic-training-shorts-X8NKK9/DX5361-101",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Lunar Roam": {
-        "name": "Nike Lunar Roam",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/0353812e-adf6-4013-97f1-1362ed37b7d7/NIKE+LUNAR+ROAM.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 112.97,
-                "link": "https://www.nike.com/t/lunar-roam-mens-shoes-tG5Tgj/DV2440-005",
-                "promo": null
-            }
-        ]
-    },
-    "LeBron XXII \"Tunnel Vision\"": {
-        "name": "LeBron XXII \"Tunnel Vision\"",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/4e5f8a46-e5c3-4c22-a1d2-ec201e169ff0/LEBRON+XXII.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 135.97,
-                "link": "https://www.nike.com/t/lebron-xxii-tunnel-vision-basketball-shoes-aNB6tabQ/FZ1094-001",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Sportswear Club Fleece": {
-        "name": "Nike Sportswear Club Fleece",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/xvbs11kuyc818vgrarc6/M+NSW+CLUB+HOODIE+PO+BB.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 48.97,
-                "link": "https://www.nike.com/t/sportswear-club-fleece-pullover-hoodie-Gw4Nwq/BV2654-410",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 45.97,
-                "link": "https://www.nike.com/t/sportswear-club-fleece-joggers-KflRdQ/BV2671-410",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 32.97,
-                "link": "https://www.nike.com/t/sportswear-club-fleece-big-kids-hoodie-twzNLC/FD2988-386",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 35.97,
-                "link": "https://www.nike.com/t/sportswear-club-fleece-big-kids-cargo-pants-XNVM0G/FD3012-386",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air Max 90 LV8": {
-        "name": "Nike Air Max 90 LV8",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/c279f13e-cf3e-4738-8aa3-5b6576b5f51a/NIKE+AIR+MAX+90+LV8.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 82.97,
-                "link": "https://www.nike.com/t/air-max-90-lv8-womens-shoes-4splTJ/FD4328-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike P-6000": {
-        "name": "Nike P-6000",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/1157417b-174f-42d2-a6ff-ee1d312feabc/W+NIKE+P-6000.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 82.97,
-                "link": "https://www.nike.com/t/p-6000-womens-shoes-SGxVgg/HV4312-025",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 82.97,
-                "link": "https://www.nike.com/t/p-6000-shoes-XkgpKW/CD6404-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Sportswear Plush": {
-        "name": "Nike Sportswear Plush",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/0032cac6-4695-475c-a941-b3409d0fd222/W+NSW+PLSH+MOD+CROP+CREW.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 63.97,
-                "link": "https://www.nike.com/t/sportswear-plush-womens-oversized-crew-neck-mod-crop-sweatshirt-jLDRbm/DQ6844-010",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Sportswear Everything Wovens": {
-        "name": "Nike Sportswear Everything Wovens",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/1a266484-b69a-4092-97bd-b7d4c59d331f/W+NSW+ESSTL+WVN+MR+STD+CRGO+PT.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 61.97,
-                "link": "https://www.nike.com/t/sportswear-everything-wovens-womens-mid-rise-cargo-pants-mlH7Wq/FV7643-010",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Blazer Mid '77": {
-        "name": "Nike Blazer Mid '77",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/1f64924b-0da5-49fd-857a-533684e27b96/NIKE+BLAZER+MID+%2777+%28PS%29.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 52.97,
-                "link": "https://www.nike.com/t/blazer-mid-77-little-kids-shoes-RPAFnzFO/DA4087-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Cortez": {
-        "name": "Nike Cortez",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/958f53e7-0ff6-4110-9c7d-bdce09b0b3c6/NIKE+KIDS+CORTEZ+%28GS%29.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 48.97,
-                "link": "https://www.nike.com/t/cortez-big-kids-shoes-iSpjyKCw/DM0950-108",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air Max 90": {
-        "name": "Nike Air Max 90",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/fc1900db-659e-4cc2-a550-4da77b4c56ce/AIR+MAX+90.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 78.97,
-                "link": "https://www.nike.com/t/air-max-90-mens-shoes-bAZ6AeHT/DM0029-107",
-                "promo": null
-            },
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 85.97,
-                "link": "https://www.nike.com/t/air-max-90-big-kids-shoes-lgH8r0/HF6358-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air Force 1 '07 Next Nature": {
-        "name": "Nike Air Force 1 '07 Next Nature",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/c7909c35-f33a-4485-8064-2bb088612f32/W+AIR+FORCE+1+%2707+NEXT+NATURE.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 69.97,
-                "link": "https://www.nike.com/t/air-force-1-07-next-nature-womens-shoes-fvxZ0g/DC9486-102",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Dunk Low Retro Premium": {
-        "name": "Nike Dunk Low Retro Premium",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/172e274c-b992-4deb-b886-b177514c751c/NIKE+DUNK+LOW+RETRO+PRM.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 81.97,
-                "link": "https://www.nike.com/t/dunk-low-retro-premium-mens-shoes-x85Qd0DS/FB8895-601",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Flex Control 4": {
-        "name": "Nike Flex Control 4",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/4291821d-5bd2-44db-8e32-67195aea4da8/NIKE+FLEX+CONTROL+TR4.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 64.97,
-                "link": "https://www.nike.com/t/flex-control-4-mens-workout-shoes-14Z62l/CD0197-002",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air Max Excee": {
-        "name": "Nike Air Max Excee",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/a807e808-00f3-4eef-8881-7518fb1be5eb/WMNS+NIKE+AIR+MAX+EXCEE.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 61.97,
-                "link": "https://www.nike.com/t/air-max-excee-womens-shoes-jKsgMj/CD5432-121",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air Force 1 '07 EasyOn": {
-        "name": "Nike Air Force 1 '07 EasyOn",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/f153b4e4-9069-44ae-bf86-f70ae8ecbaa1/W+AIR+FORCE+1+%2707+FLYEASE.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 97.97,
-                "link": "https://www.nike.com/t/air-force-1-07-easyon-womens-shoes-q2Nz01/DX5883-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike AL8": {
-        "name": "Nike AL8",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/2e339f64-607b-4252-a724-e617a47213a4/W+NIKE+AL8.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 80.97,
-                "link": "https://www.nike.com/t/al8-womens-shoes-r93WJ3g5/HJ7289-030",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Court Legacy": {
-        "name": "Nike Court Legacy",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/aaac8e7b-b62e-4023-9844-7ac4a0577f0a/NIKE+COURT+LEGACY+NN.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 55.97,
-                "link": "https://www.nike.com/t/court-legacy-mens-shoes-75ljqX/DH3162-100",
-                "promo": null
-            }
-        ]
-    },
-    "Nike Air Force 1 Wild": {
-        "name": "Nike Air Force 1 Wild",
-        "image": "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/26078ec6-8299-4eec-97bc-e44bd50d527a/W+AIR+FORCE+1+WILD.png",
-        "prices": [
-            {
-                "store": "https://www.nike.com/w/sale-3yaep",
-                "price": 87.97,
-                "link": "https://www.nike.com/t/air-force-1-wild-womens-shoes-1Fcpa8bH/FB2348-201",
-                "promo": null
-            }
-        ]
-    }
+    "nike": [
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 Essential",
+            "price": 105.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-essential-mens-shoes-2C5sX2/FZ5808-400"
+        },
+        {
+            "store": "Nike",
+            "name": "",
+            "price": 91.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-mens-shoes-bSzK4f1F/DC1454-100"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 Premium",
+            "price": 120.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-premium-mens-shoes-48LqBx/FD9081-001"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1",
+            "price": 90.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-womens-shoes-0vW0ds/DZ2628-111"
+        },
+        {
+            "store": "Nike",
+            "name": "Air Max 1",
+            "price": 65.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-big-kids-shoes-qTLjtC/DZ3307-104"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 '87 Textile",
+            "price": 119.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-87-textile-womens-shoes-HkXwzR/HF1194-101"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 '86 Premium",
+            "price": 150.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-86-premium-mens-shoes-CgQJFm/DQ3989-103"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 Essential Premium",
+            "price": 105.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-essential-premium-mens-shoes-5pRnnD/HF1516-200"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 SC",
+            "price": 82.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-sc-mens-shoes-bNNbQl/FB9660-200"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 '87",
+            "price": 93.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-87-womens-shoes-fW8gRs/FZ1468-100"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 Premium",
+            "price": 160.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-premium-mens-shoes-KN1VZh/HV2303-100"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 '86 OG G",
+            "price": 98.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-86-og-g-mens-golf-shoes-JZm9QM/DV1403-600"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 '86 Premium",
+            "price": 150.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-86-premium-mens-shoes-kvz8QiGw/HF0551-300"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 '87",
+            "price": 150.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-87-womens-shoes-WGQk58/HF5338-100"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 EasyOn",
+            "price": 68.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-easyon-little-kids-shoes-mx0nl8/DZ3308-106"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max Dn x Isamaya Ffrench",
+            "price": 170.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-dn-x-isamaya-ffrench-womens-shoes-j65hmm/HQ3837-201"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max SC",
+            "price": 51.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-sc-baby-toddler-shoes-tDCZHt/CZ5361-122"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max Waffle SP",
+            "price": 140.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/launch/r/FV6946-400"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max Solo",
+            "price": 66.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-solo-mens-shoes-rkVsgQ/HJ9143-133"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 90 Premium",
+            "price": 150.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-90-premium-mens-shoes-FJdh9VXk/IF1721-700"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max 1 '86 OG x Eastside Golf",
+            "price": 180.0,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-1-86-og-x-eastside-golf-golf-shoes-Dm1qxL/HQ3074-100"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max SC",
+            "price": 68.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-sc-big-kids-shoe-MS26RR/CZ5358-015"
+        },
+        {
+            "store": "Nike",
+            "name": "Nike Air Max Excee",
+            "price": 65.97,
+            "final_price": "Nike",
+            "promo_code": null,
+            "link": "https://www.nike.com/t/air-max-excee-mens-shoes-vl97pm/HQ3610-010"
+        }
+    ],
+    "footlocker": [
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 '07 LE",
+            "price": 115.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-07-le-mens/W2288111.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low Retro",
+            "price": 115.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-retro-mens/D1391100.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": 90.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-boys-grade-school/W1590100.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Retro 6",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-retro-6-mens/T8529164.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Spizike Low",
+            "price": 160.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-spizike-low-mens/Q1759001.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Retro 9",
+            "price": 210.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-retro-9-mens/V4794030.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "New Balance 9060",
+            "price": 150.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/new-balance-9060-mens/98893005.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": 70.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-boys-preschool/W1588100.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Retro 3",
+            "price": 150.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-retro-3-boys-grade-school/M0967001.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 Low",
+            "price": 90.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-low-boys-grade-school/D2920111.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Max CB2 '94",
+            "price": 170.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-max-cb2-94-mens/05440005.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "adidas Originals Samba",
+            "price": 80.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/adidas-originals-samba-boys-grade-school/IE3675.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Retro 3",
+            "price": 150.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-retro-3-boys-grade-school/M0967010.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan True Flight",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-true-flight-boys-grade-school/43795107.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-womens/J7673002.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 Low '24",
+            "price": 90.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-low-24-boys-grade-school/V5951111.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 '07 LE Low",
+            "price": 115.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-07-le-low-mens/2288001M.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": 90.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-boys-grade-school/B9109119.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": 70.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-girls-preschool/B9108102.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan True Flight",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-true-flight-mens/42964072.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 '07 LE Low",
+            "price": 115.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-07-le-low-womens/D8959100.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "UGG Tasman",
+            "price": 110.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/ugg-tasman-womens/5955SNDD.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 Low",
+            "price": 115.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-low-mens/Z0627010.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Spizike Low",
+            "price": 160.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-spizike-low-mens/Q1759141.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Retro 13",
+            "price": 200.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-retro-13-mens/D5982601.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 Low '24",
+            "price": 90.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-low-24-boys-grade-school/V5951001.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "New Balance 9060 Bone Sparrow",
+            "price": 110.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/new-balance-9060-bone-sparrow-boys-grade-school/GC9060GC.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 '07 LE",
+            "price": 115.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-07-le-mens/D2739100.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": 55.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-girls-toddler/B9107102.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Retro 1 High OG",
+            "price": 180.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-retro-1-high-og-mens/Z5485061.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Vans Knu Skool",
+            "price": 75.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/vans-knu-skool-mens/N09QC6BT.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Reebok Question Mid \"Yellow Toe\"",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/reebok-question-mid-yellow-toe-mens/FX4278.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan True Flight",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-true-flight-mens/42964140.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": 90.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-boys-grade-school/B9109114.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low Retro",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-retro-mens/Q3640790.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan AJ 1 Low",
+            "price": 115.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-aj-1-low-mens/53558152.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Force 1 Low EasyOn",
+            "price": 70.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-force-1-low-easyon-boys-preschool/N0237111.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Dunk Low",
+            "price": null,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-dunk-low-womens/J7673001.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Air Jordan 1 Mid SE",
+            "price": 135.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-air-jordan-1-mid-se-mens/Z2142114.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Max Plus",
+            "price": 180.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-max-plus-womens/J9743601.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Jordan Air Jordan 4 Retro",
+            "price": 160.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/jordan-air-jordan-4-retro-boys-grade-school/Z858500.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "adidas Originals Handball Spezial",
+            "price": 110.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/adidas-originals-handball-spezial-womens/IF6562.html"
+        },
+        {
+            "store": "Foot Locker",
+            "name": "Nike Air Foamposite One",
+            "price": 240.0,
+            "final_price": "Foot Locker",
+            "promo_code": null,
+            "link": "https://www.footlocker.com/product/nike-air-foamposite-one-mens/Q8181400.html"
+        }
+    ],
+    "matches": []
 }
