@@ -23,34 +23,26 @@ def get_nike_deals():
 
         wait = WebDriverWait(driver, 10)
 
-        # Updated selector for product cards
         product_cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.product-card")))
 
         deals = {}
 
         for card in product_cards:
             try:
-                # Extract product name
                 title_element = card.find_element(By.CSS_SELECTOR, "div.product-card__title")
                 product_name = title_element.text.strip()
 
-                # Extract price
                 price_element = card.find_element(By.CSS_SELECTOR, "div.product-price")
                 price_text = price_element.text.strip().replace("$", "").replace(",", "")
                 price = float(price_text) if price_text else None
 
-                # Extract product link (new approach)
-                try:
-                    link_element = card.find_element(By.TAG_NAME, "a")
-                    product_link = link_element.get_attribute("href")
-                except:
-                    product_link = None  # Fallback if link is missing
+                link_element = card.find_element(By.TAG_NAME, "a")
+                product_link = link_element.get_attribute("href")
 
-                # Extract Style ID from URL
                 style_id = extract_style_id(product_link)
 
-                # Check for promo codes
-                final_price, promo_code = apply_promo_code("Nike", price)
+                # Convert price to string before applying promo code
+                final_price, promo_code = apply_promo_code("Nike", str(price) if price else "0")
 
                 if style_id:
                     deals[style_id] = {
@@ -75,7 +67,6 @@ def get_nike_deals():
         driver.quit()
         return {}
 
-# Test Run
 if __name__ == "__main__":
     deals = get_nike_deals()
     print(deals)
