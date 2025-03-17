@@ -1,6 +1,7 @@
 import time
 from selenium.webdriver.common.by import By
-from utils.selenium_setup import get_selenium_driver
+from utils.selenium_setup import get_driver
+
 
 NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
 
