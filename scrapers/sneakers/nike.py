@@ -31,6 +31,9 @@ def get_nike_deals():
                 # Extract Product URL
                 product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
 
+                # Extract Style ID from URL
+                style_id = product_url.split("/")[-1]  # Get last part of URL (e.g., FZ5808-400)
+
                 # Extract Image URL
                 image_url = card.find_element(By.CLASS_NAME, "product-card__hero-image").get_attribute("src")
 
@@ -53,6 +56,7 @@ def get_nike_deals():
                     "image_url": image_url,
                     "sale_price": sale_price,
                     "original_price": original_price,
+                    "style_id": style_id,  # Added style_id to fix KeyError
                 })
 
             except Exception as e:
