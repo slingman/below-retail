@@ -1,47 +1,35 @@
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
+from selenium.webdriver.common.keys import Keys
+from time import sleep
+from scrapers.utils import get_driver  # Ensure this is correctly imported
 
 def get_footlocker_deals():
     driver = get_driver()
-    search_url = "https://www.footlocker.com/search?query=air%20max%201"  # Corrected URL
-    driver.get(search_url)
 
-    deals = []
     try:
-        # Wait until products are visible
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, ".ProductCard"))
-        )
-        products = driver.find_elements(By.CSS_SELECTOR, ".ProductCard")
+        url = "https://www.footlocker.com/search?query=air+max+1"
+        driver.get(url)
+        sleep(3)  # Allow time for the page to load
+
+        deals = []
+        products = driver.find_elements(By.CSS_SELECTOR, ".ProductCard")  # Update selector if necessary
 
         for product in products:
-            retry_attempts = 3  # Retry mechanism for stale elements
-            while retry_attempts > 0:
-                try:
-                    name_element = product.find_element(By.CSS_SELECTOR, "a.ProductCard-link")
-                    price_element = product.find_element(By.CSS_SELECTOR, "div.ProductCard-price")
+            try:
+                title = product.find_element(By.CSS_SELECTOR, ".ProductCard-name").text
+                price = product.find_element(By.CSS_SELECTOR, ".ProductPrice").text
+                link = product.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
 
-                    name = name_element.text.strip()
-                    price_text = price_element.text.replace("$", "").strip()
-                    price = float(price_text) if price_text else None  # Handle missing prices
+                deals.append({
+                    "title": title,
+                    "price": price,
+                    "link": link,
+                    "store": "Foot Locker"
+                })
+            except Exception as e:
+                print(f"Error extracting product details: {e}")
 
-                    link = name_element.get_attribute("href")
-                    
-                    deals.append({
-                        "store": "Foot Locker",
-                        "name": name,
-                        "price": price,
-                        "link": f"https://www.footlocker.com{link}"  # Ensure full URL
-                    })
-                    break  # Break out of retry loop on success
-                except StaleElementReferenceException:
-                    retry_attempts -= 1
-                    print("🔄 Retrying stale element...")
+        return deals
 
-    except TimeoutException:
-        print("❌ Timeout: No products found on Foot Locker for 'Air Max 1'")
-    
-    driver.quit()
-    return deals
+    finally:
+        driver.quit()
