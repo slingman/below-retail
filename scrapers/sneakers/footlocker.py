@@ -1,39 +1,71 @@
+from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import time
-from utils.selenium_setup import get_selenium_driver
 
 def get_footlocker_deals():
-    driver = get_selenium_driver()
-
     url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
-    driver.get(url)
-    time.sleep(5)  # Wait for page load
 
-    deals = []
+    # Set up Selenium WebDriver
+    service = Service(ChromeDriverManager().install())
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Run in headless mode for efficiency
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        products = driver.find_elements(By.CSS_SELECTOR, "div.ProductCard")
-        for product in products:
+        driver.get(url)
+        time.sleep(5)  # Allow time for page to load
+
+        deals = []
+        product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
+
+        for card in product_cards:
             try:
-                name = product.find_element(By.CSS_SELECTOR, "div.ProductCard-name").text
-                price = product.find_element(By.CSS_SELECTOR, "div.ProductPrice").text
-                product_url = product.find_element(By.CSS_SELECTOR, "a.ProductCard-link").get_attribute("href")
+                # Extract Product Name
+                product_name = card.find_element(By.CLASS_NAME, "ProductCard-title").text
 
-                style_id = "Unknown"  # Foot Locker may not display this directly
+                # Extract Product URL
+                product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
 
+                # Extract Image URL
+                image_url = card.find_element(By.CLASS_NAME, "ProductCard-img").get_attribute("src")
+
+                # Extract Prices
+                try:
+                    sale_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__sale").text
+                except:
+                    sale_price = None
+
+                try:
+                    original_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__regular").text
+                except:
+                    original_price = sale_price  # If no original price, assume no discount
+
+                # Extract Style ID (if available)
+                try:
+                    style_id = product_url.split("/")[-1].split(".")[0]  # Extract last part of URL before ".html"
+                except:
+                    style_id = None
+
+                # Store deal information
                 deals.append({
                     "store": "Foot Locker",
-                    "name": name,
-                    "price": price,
-                    "url": product_url,
-                    "style_id": style_id
+                    "product_name": product_name,
+                    "product_url": product_url,
+                    "image_url": image_url,
+                    "sale_price": sale_price,
+                    "original_price": original_price,
+                    "style_id": style_id,  # Ensures Nike & Foot Locker match
                 })
+
             except Exception as e:
                 print(f"⚠️ Skipping a product due to error: {e}")
 
-    except Exception as e:
-        print(f"❌ Error fetching Foot Locker deals: {e}")
+        return deals
 
-    driver.quit()
-    return deals
+    finally:
+        driver.quit()
