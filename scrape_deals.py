@@ -1,5 +1,5 @@
-from nike import get_nike_deals
-from footlocker import get_footlocker_deals
+from sneakers.nike import get_nike_deals
+from sneakers.footlocker import get_footlocker_deals
 import json
 
 # Fetch deals
