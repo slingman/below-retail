@@ -1,75 +1,70 @@
+import os
 import tweepy
 import json
-import os
-import time
-import requests
 from dotenv import load_dotenv
+import requests
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-API_KEY = os.getenv("TWITTER_API_KEY")
-API_SECRET = os.getenv("TWITTER_API_SECRET")
-ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN")
-ACCESS_SECRET = os.getenv("TWITTER_ACCESS_SECRET")
-BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
+# Debugging: Check if variables are being read correctly
+print("API_KEY:", os.getenv("API_KEY"))  # Should print your API key, NOT 'None'
 
-# Authenticate Twitter API
-client = tweepy.Client(
-    consumer_key=API_KEY,
-    consumer_secret=API_SECRET,
-    access_token=ACCESS_TOKEN,
-    access_token_secret=ACCESS_SECRET,
-    bearer_token=BEARER_TOKEN
-)
+# Set up Twitter authentication
+API_KEY = os.getenv("API_KEY")
+API_KEY_SECRET = os.getenv("API_KEY_SECRET")
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+ACCESS_TOKEN_SECRET = os.getenv("ACCESS_TOKEN_SECRET")
 
-auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
-api = tweepy.API(auth)
+if None in [API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET]:
+    raise ValueError("❌ Twitter API credentials are missing! Check your .env file.")
 
-# Load deals
+# Authenticate with Twitter API
+auth = tweepy.OAuth1UserHandler(API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+client = tweepy.Client(consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET)
+
+# Load deals from deals.json
 with open("deals.json", "r") as f:
-    sneaker_deals = json.load(f)
+    deals = json.load(f)
 
-# Tweet best deals
-for sneaker, data in sneaker_deals.items():
-    prices = sorted(data["prices"], key=lambda x: x["price"])
-    
-    if len(prices) < 2:
-        print(f"⚠️ Only one store found for {sneaker}, skipping comparison.")
+# Iterate through deals and post tweets
+for product, details in deals.items():
+    if len(details["prices"]) < 2:
+        print(f"⚠️ Only one store found for {product}, skipping comparison.")
         continue
 
-    best_deal = prices[0]
-    other_prices = "\n".join([f"- {p['store']}: ${p['price']}" for p in prices[1:3]])
+    # Sort prices to find the lowest and highest
+    sorted_prices = sorted(details["prices"], key=lambda x: x["price"])
+    lowest = sorted_prices[0]
+    highest = sorted_prices[-1]
 
-    tweet_text = f"""
-    🔥 {data['name']} (Style ID: {data['style_id']}) is cheapest at {best_deal['store']} for ${best_deal['price']}!
-    
-    Compared at:
-    {other_prices}
-    
-    Buy here: {best_deal['link']} #BestDeal #SneakerDeals
-    """.strip()
+    tweet_text = (
+        f"🔥 {product} is cheapest at {lowest['store']} for ${lowest['price']}!\n\n"
+        f"💰 Compared at {highest['store']} for ${highest['price']}.\n\n"
+        f"🔗 Buy here: {lowest['link']}\n\n"
+        f"#BestDeal #SneakerDeals"
+    )
 
-    # Download product image
-    image_url = data["image"]
-    image_path = "sneaker.jpg"
+    # Attempt to download the product image
+    image_url = details["image"]
+    image_path = "temp_image.jpg"
 
     try:
         response = requests.get(image_url, stream=True)
         if response.status_code == 200:
-            with open(image_path, "wb") as img_file:
+            with open(image_path, "wb") as file:
                 for chunk in response.iter_content(1024):
-                    img_file.write(chunk)
+                    file.write(chunk)
 
-            media = api.media_upload(image_path)
+            media = client.media_upload(image_path)
             client.create_tweet(text=tweet_text, media_ids=[media.media_id])
-            print(f"✅ Tweeted: {tweet_text}")
+            print(f"✅ Tweet posted: {tweet_text}")
         else:
-            client.create_tweet(text=tweet_text)
-            print(f"✅ Tweeted (No image): {tweet_text}")
+            raise Exception("Image download failed")
 
     except Exception as e:
-        print(f"❌ Error posting tweet: {e}")
+        print(f"❌ Error downloading image: {e}")
+        print("Posting text-only tweet.")
+        client.create_tweet(text=tweet_text)
+        print(f"✅ Text-only tweet posted: {tweet_text}")
 
-    # Respect Twitter rate limits
-    time.sleep(10)
