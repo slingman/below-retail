@@ -5,9 +5,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import get_driver
 from utils.promo_codes import apply_promo_code
 
-def get_footlocker_deals():
+def scrape_footlocker():
     url = "https://www.footlocker.com/en/category/shoes.html"  # Update URL if needed
-    driver = get_driver()
+    driver = get_driver(headless=True)  # Now properly supports headless mode
 
     try:
         driver.get(url)
