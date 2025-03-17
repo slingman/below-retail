@@ -4,13 +4,13 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
-def get_footlocker_deal(target_style_id):
-    url = "https://www.footlocker.com/product/nike-air-max-1-mens/Z5808400.html"  # Single product page
+def get_footlocker_deals():
+    url = "https://www.footlocker.com/product/nike-air-max-1-mens/Z5808400.html"  # Direct product page
 
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
+    options.add_argument("--headless")  # Run in headless mode for efficiency
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -21,41 +21,51 @@ def get_footlocker_deal(target_style_id):
         time.sleep(5)  # Allow time for page to load
 
         # Extract Product Name
-        product_name = driver.find_element(By.TAG_NAME, "h1").text.strip()
+        try:
+            product_name = driver.find_element(By.CLASS_NAME, "ProductName-primary").text
+        except:
+            product_name = "Unknown Product"
 
-        # Extract Style ID (from product page content)
+        # Extract Product URL
+        product_url = url  # Since we're on the product page
+
+        # Extract Style ID (Supplier-sku #)
         style_id_text = None
         try:
             details_section = driver.find_element(By.CLASS_NAME, "ProductDetails")
             details_text = details_section.text
+            print("\nDEBUG: Full product details text from Foot Locker:\n", details_text)  # Debug print
+
             for line in details_text.split("\n"):
                 if "Supplier-sku #" in line:
                     style_id_text = line.split("#")[-1].strip()
+                    print(f"✅ Extracted Style ID from Foot Locker: {style_id_text}")  # Debug print
                     break
         except:
+            print("⚠️ Unable to extract style ID from Foot Locker")
             style_id_text = None
 
         # Extract Price
         try:
             price_text = driver.find_element(By.CLASS_NAME, "ProductPrice").text
+            print(f"DEBUG: Raw price text from Foot Locker: {price_text}")  # Debug print
             price = float(price_text.replace("$", "").split()[0])  # Convert to float
         except:
+            print("⚠️ Unable to extract price from Foot Locker")
             price = None  # If price is missing
 
-        # Validate Style ID
-        final_style_id = style_id_text if style_id_text else None
+        # Store deal information
+        deal = {
+            "store": "Foot Locker",
+            "product_name": product_name,
+            "product_url": product_url,
+            "price": price,
+            "style_id": style_id_text,
+        }
 
-        # Check if this matches the target style ID
-        if final_style_id == target_style_id:
-            return {
-                "store": "Foot Locker",
-                "product_name": product_name,
-                "product_url": url,
-                "price": price,
-                "style_id": final_style_id
-            }
-        else:
-            return None  # No matching product
+        print(f"🟢 Foot Locker Product Found: {product_name} | Price: {price} | Style ID: {style_id_text}")
+
+        return deal
 
     finally:
         driver.quit()
