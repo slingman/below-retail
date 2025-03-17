@@ -1,61 +1,68 @@
+import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import NoSuchElementException
-import time
 
-BASE_URL = "https://www.footlocker.com"
+# Initialize Selenium WebDriver
+def get_driver():
+    options = Options()
+    options.add_argument("--headless")  # Run without UI
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    
+    service = Service(ChromeDriverManager().install())  # Automatically download correct ChromeDriver
+    return webdriver.Chrome(service=service, options=options)
 
 def get_footlocker_deals():
-    """Scrape Nike Air Max 1 deals from Foot Locker, ensuring correct style ID matching."""
+    driver = get_driver()
+    base_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
+    print(f"\n🔍 Scraping Foot Locker: {base_url}")
     
-    options = Options()
-    options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"  # Ensure correct Chrome binary path
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
+    driver.get(base_url)
+    time.sleep(5)  # Allow page to load
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    
     deals = []
-    search_url = f"{BASE_URL}/search?query=nike%20air%20max%201"
-    driver.get(search_url)
-    time.sleep(3)  # Allow page to load
-
-    products = driver.find_elements("css selector", ".ProductCard")
+    product_links = driver.find_elements(By.CSS_SELECTOR, "a.ProductCard-link")
     
-    for product in products:
-        try:
-            link_element = product.find_element("css selector", "a.ProductCard-link")
-            product_link = link_element.get_attribute("href")
-
-            driver.get(product_link)
-            time.sleep(2)  # Allow product page to load
-
+    for link in product_links[:15]:  # Limit to first 15 products for speed
+        product_url = link.get_attribute("href")
+        if product_url:
             try:
-                name = driver.find_element("css selector", "h1.ProductName-primary").text
-                price = driver.find_element("css selector", ".ProductPrice").text
-            except NoSuchElementException:
-                print(f"⚠️ Price or Name not found for {product_link}")
-                price = "Price not found"
-                name = "Nike Air Max 1"
-
-            try:
-                supplier_sku = driver.find_element("css selector", "[data-test='supplier-sku']").text  # Ensure correct element
-            except NoSuchElementException:
-                print(f"⚠️ Supplier SKU not found for {product_link}")
-                supplier_sku = None
-
-            deals.append({
-                "name": name,
-                "price_final": price,
-                "link": product_link,
-                "style_id": supplier_sku  # Ensure this matches Nike's format
-            })
-
-        except Exception as e:
-            print(f"⚠️ Error processing product: {product_link}, Message: {e}")
-
+                deals.append(scrape_footlocker_product(driver, product_url))
+            except Exception as e:
+                print(f"⚠️ Error processing product: {product_url}, Message: {e}")
+    
     driver.quit()
-    return deals
+    return [deal for deal in deals if deal]  # Filter out None values
+
+def scrape_footlocker_product(driver, url):
+    """Scrape individual Foot Locker product page"""
+    print(f"🔗 Visiting {url}")
+    driver.get(url)
+    time.sleep(3)
+
+    try:
+        name = driver.find_element(By.CSS_SELECTOR, "h1.ProductName-primary").text.strip()
+    except:
+        name = "Unknown"
+
+    try:
+        price = driver.find_element(By.CSS_SELECTOR, ".ProductPrice-final").text.strip()
+    except:
+        price = "Price not found"
+
+    try:
+        supplier_sku = driver.find_element(By.XPATH, "//div[contains(text(),'Supplier-sku')]/following-sibling::div").text.strip()
+    except:
+        supplier_sku = "Unknown"
+
+    return {
+        "name": name,
+        "price_final": price,
+        "link": url,
+        "supplier_sku": supplier_sku  # This now correctly matches Nike’s "Style ID"
+    }
+
