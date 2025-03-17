@@ -3,32 +3,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
-import re
-
-def clean_price(price_text):
-    """ Remove non-numeric characters and convert price to float. """
-    if price_text:
-        return float(re.sub(r"[^\d.]", "", price_text))
-    return None
-
-def extract_supplier_sku(product_url, driver):
-    """ Opens the product page and extracts Supplier-SKU (Nike’s Style ID). """
-    try:
-        driver.get(product_url)
-        time.sleep(3)  # Give page time to load
-
-        # Look for Supplier-SKU (ensure it's case-insensitive & allows spaces)
-        try:
-            sku_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
-            supplier_sku = sku_element.text.strip()
-            return supplier_sku
-        except:
-            print(f"⚠️ Supplier-SKU not found on {product_url}")
-            return None  # Skip if Supplier-SKU not found
-
-    except Exception as e:
-        print(f"⚠️ Error extracting Supplier-SKU from {product_url}: {e}")
-        return None
 
 def get_footlocker_deals():
     url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
@@ -36,7 +10,7 @@ def get_footlocker_deals():
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  
+    options.add_argument("--headless")  # Run in headless mode for efficiency
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -55,13 +29,7 @@ def get_footlocker_deals():
                 try:
                     product_name = card.find_element(By.CLASS_NAME, "ProductCard-title").text
                 except:
-                    product_name = card.find_element(By.CLASS_NAME, "ProductName-primary").text  # Fallback
-                
-                if not product_name:
-                    continue  # Skip if name is missing
-                
-                if "Air Max 1" not in product_name:
-                    continue  # Skip non-Air Max 1 products
+                    product_name = card.find_element(By.CLASS_NAME, "ProductName-primary").text  
 
                 # Extract Product URL
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
@@ -74,25 +42,31 @@ def get_footlocker_deals():
 
                 # Extract Prices
                 try:
-                    sale_price = clean_price(card.find_element(By.CLASS_NAME, "ProductCard-pricing__sale").text)
+                    sale_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__sale").text
+                    sale_price = float(sale_price.replace("$", ""))  
                 except:
                     sale_price = None
 
                 try:
-                    original_price = clean_price(card.find_element(By.CLASS_NAME, "ProductCard-pricing__regular").text)
+                    original_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__regular").text
+                    original_price = float(original_price.replace("$", ""))  
                 except:
                     original_price = sale_price  
 
+                # Ensure at least one valid price is present
                 if not sale_price and not original_price:
-                    continue  # Skip products with no price
+                    continue  
 
-                # Extract Style ID from Supplier-SKU on Product Page
-                style_id = extract_supplier_sku(product_url, driver)
+                # Extract Product ID (this is **not** the Nike style ID)
+                product_id = product_url.split("/")[-1].split(".")[0]  
 
-                # Ensure the `style_id` is extracted and stored
-                if not style_id:
-                    print(f"⚠️ No style ID found for {product_name}, skipping...")
-                    continue  # Skip products where we can't match to Nike
+                # Extract Style ID from product page (Matching Nike's style ID)
+                driver.get(product_url)
+                time.sleep(2)  
+                try:
+                    style_id = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #')]/following-sibling::span").text.strip()
+                except:
+                    style_id = None  
 
                 # Store deal information
                 deals.append({
@@ -102,7 +76,8 @@ def get_footlocker_deals():
                     "image": image_url,    
                     "price": sale_price if sale_price else original_price,  
                     "original_price": original_price,
-                    "style_id": style_id,  # This should now match Nike's Style ID
+                    "product_id": product_id,  
+                    "style_id": style_id  
                 })
 
             except Exception as e:
