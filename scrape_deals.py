@@ -6,10 +6,10 @@ import json
 TARGET_STYLE_ID = "FZ5808-400"
 
 print("\nFetching Nike deal...")
-nike_deal = get_nike_deal(TARGET_STYLE_ID)
+nike_deal = get_nike_deals(TARGET_STYLE_ID)
 
 print("\nFetching Foot Locker deal...")
-footlocker_deal = get_footlocker_deal(TARGET_STYLE_ID)
+footlocker_deal = get_footlocker_deals(TARGET_STYLE_ID)
 
 # Compare prices if both stores have the same product
 if nike_deal and footlocker_deal:
