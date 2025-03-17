@@ -50,7 +50,7 @@ def get_footlocker_deals():
 
                 # Construct the correct Foot Locker product page URL
                 if footlocker_product_id:
-                    product_url = f"https://www.footlocker.com/product/~/{footlocker_product_id}.html"
+                    product_url = f"https://www.footlocker.com/product/~/ {footlocker_product_id}.html"
                 else:
                     product_url = raw_product_url  # Fallback if extraction fails
 
@@ -79,17 +79,17 @@ def get_footlocker_deals():
 
                 # Visit the product page to extract the "Supplier-sku #" (Nike's Style ID)
                 driver.get(product_url)
-                time.sleep(3)  # Allow time for the product page to load
+                time.sleep(5)  # Allow time for the product page to load (increased wait time)
 
                 # DEBUG: Print full product page content to see if "Supplier-sku #" exists
                 full_page_text = driver.page_source
                 print("\nDEBUG: Full product page HTML from Foot Locker:\n", full_page_text[:1000])  # Print first 1000 characters
 
                 try:
-                    # Look for "Supplier-sku #" in the page text
-                    match = re.search(r"Supplier-sku #:\s*([\w-]+)", full_page_text)
+                    # Look for "Supplier-sku #" in the page text using regex
+                    match = re.search(r"Supplier-sku\s*#:\s*([\w-]+)", full_page_text)
                     if match:
-                        style_id = match.group(1)
+                        style_id = match.group(1).strip()
                         print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
                     else:
                         style_id = None
