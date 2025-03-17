@@ -60,10 +60,10 @@ def get_footlocker_deals():
                 # Store deal information
                 deals.append({
                     "store": "Foot Locker",
-                    "product_name": product_name,
-                    "product_url": product_url,
-                    "image_url": image_url,
-                    "sale_price": sale_price,
+                    "name": product_name,  # Renamed from "product_name" to match scrape_deals.py
+                    "url": product_url,    # Renamed from "product_url"
+                    "image": image_url,    # Renamed from "image_url"
+                    "price": sale_price,   # Renamed from "sale_price"
                     "original_price": original_price,
                     "style_id": style_id,  # Ensures Nike & Foot Locker match
                 })
