@@ -5,9 +5,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import get_driver
 from utils.promo_codes import apply_promo_code
 
-def scrape_footlocker():
+def get_footlocker_deals():
     url = "https://www.footlocker.com/en/category/shoes.html"  # Update URL if needed
-    driver = get_driver(headless=True)  # Now properly supports headless mode
+    driver = get_driver()
 
     try:
         driver.get(url)
@@ -69,6 +69,6 @@ def scrape_footlocker():
 
 # Test run
 if __name__ == "__main__":
-    deals = scrape_footlocker()
+    deals = get_footlocker_deals()
     for deal in deals:
         print(deal)
