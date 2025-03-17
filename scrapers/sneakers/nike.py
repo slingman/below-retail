@@ -1,8 +1,5 @@
 import time
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
-from selenium import webdriver
 from utils.selenium_setup import get_selenium_driver
 
 NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
@@ -10,16 +7,16 @@ NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
 def get_nike_deals():
     """
     Scrapes Nike's website for Air Max 1 deals using Selenium.
+    Returns a dictionary where the key is the style_id.
     """
     print("🔍 Searching Nike for Air Max 1...")
     deals = {}
 
-    # Set up Selenium driver
-    driver = get_selenium_driver(headless=True)  # Headless mode for speed
+    driver = get_selenium_driver(headless=True)  # Run in headless mode for speed
 
     try:
         driver.get(NIKE_SEARCH_URL)
-        time.sleep(5)  # Let the page load
+        time.sleep(5)  # Allow page to load
 
         products = driver.find_elements(By.CLASS_NAME, "product-card__body")
 
@@ -29,18 +26,25 @@ def get_nike_deals():
 
         for product in products:
             try:
-                name = product.find_element(By.CLASS_NAME, "product-card__title").text
-                price = product.find_element(By.CLASS_NAME, "product-price").text.replace("$", "").strip()
-                link = product.find_element(By.TAG_NAME, "a").get_attribute("href")
+                name_element = product.find_element(By.CLASS_NAME, "product-card__title")
+                price_element = product.find_element(By.CLASS_NAME, "product-price")
+                link_element = product.find_element(By.TAG_NAME, "a")
 
-                # Extract Style ID from URL
-                style_id = link.split("/")[-1] if "/" in link else "UNKNOWN"
+                if not name_element or not price_element or not link_element:
+                    continue  # Skip if any essential info is missing
 
-                if style_id != "UNKNOWN":
+                name = name_element.text.strip()
+                price = price_element.text.replace("$", "").strip()
+                link = link_element.get_attribute("href")
+
+                # Extract style ID from URL (Nike uses "/STYLE_ID" at the end of the product page URL)
+                style_id = link.split("/")[-1] if "/" in link else None
+
+                if style_id and price.replace(".", "").isdigit():  # Ensure valid price
                     deals[style_id] = {
                         "name": name,
                         "style_id": style_id,
-                        "image": "",  # Placeholder (Nike requires dynamic image extraction)
+                        "image": "",  # Placeholder (we can extract dynamically)
                         "prices": [{"store": "Nike", "price": float(price), "link": link}]
                     }
 
