@@ -1,38 +1,93 @@
-import time
 import requests
 from bs4 import BeautifulSoup
-from utils.selenium_setup import get_selenium_driver
+import time
 
-FOOTLOCKER_SEARCH_URL = "https://www.footlocker.com/search?q={query}"
+BASE_URL = "https://www.footlocker.com"
+SEARCH_URL = "https://www.footlocker.com/search?query=air%20max%201"
 
-def scrape_footlocker(query):
-    print(f"🔍 Searching Foot Locker for {query}...")
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
+}
 
-    driver = get_selenium_driver()
-    search_url = FOOTLOCKER_SEARCH_URL.format(query=query.replace(" ", "%20"))
-    driver.get(search_url)
-    time.sleep(5)
+def get_footlocker_deals():
+    """Scrape Nike Air Max 1 deals from Foot Locker, extracting product style IDs correctly."""
+    deals = []
+    
+    # Step 1: Perform a search request to get the list of products
+    response = requests.get(SEARCH_URL, headers=HEADERS)
+    if response.status_code != 200:
+        print(f"❌ Error: Failed to fetch Foot Locker search results. Status Code: {response.status_code}")
+        return []
 
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
+    soup = BeautifulSoup(response.text, "html.parser")
+    product_containers = soup.find_all("div", class_="ProductCard")
+    
+    if not product_containers:
+        print("⚠️ Warning: No products found on Foot Locker search page.")
+        return []
 
-    results = {}
-
-    for product in soup.find_all("div", class_="ProductCard"):
+    for product in product_containers:
         try:
-            name = product.find("span", class_="ProductName-primary").text.strip()
-            price = product.find("span", class_="ProductPrice-final").text.strip().replace("$", "")
-            link = "https://www.footlocker.com" + product.find("a")["href"]
-            image = product.find("img")["src"] if product.find("img") else ""
+            # Extract product name and URL
+            product_name = product.find("p", class_="ProductCard-name").text.strip()
+            product_link = product.find("a", class_="ProductCard-link")["href"]
+            full_product_url = BASE_URL + product_link
 
-            results[name] = {
-                "name": name,
-                "image": image,
-                "price": float(price.replace(",", "")),
-                "link": link,
-                "promo": None
+            # Step 2: Visit the product page to extract the style ID (Supplier-SKU)
+            style_id = get_footlocker_style_id(full_product_url)
+            if not style_id:
+                print(f"⚠️ Warning: Missing style_id for {product_name}, skipping.")
+                continue  # Skip this product if no style_id is found
+
+            # Extract price
+            price_tag = product.find("span", class_="ProductPrice")
+            price = float(price_tag.text.replace("$", "").strip()) if price_tag else None
+
+            # Extract image URL
+            img_tag = product.find("img", class_="ProductCard-image")
+            image_url = img_tag["src"] if img_tag else None
+
+            # Construct deal entry
+            deal = {
+                "name": product_name,
+                "style_id": style_id,
+                "image": image_url,
+                "prices": [{
+                    "store": "Foot Locker",
+                    "price": price,
+                    "link": full_product_url
+                }]
             }
-        except:
-            continue
+            deals.append(deal)
 
-    return results
+            # Delay to avoid rate limiting
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"❌ Error processing product: {e}")
+
+    return deals
+
+
+def get_footlocker_style_id(product_url):
+    """Extract style ID (Supplier-SKU) from Foot Locker product page."""
+    try:
+        response = requests.get(product_url, headers=HEADERS)
+        if response.status_code != 200:
+            return None
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        style_id_tag = soup.find("span", class_="ProductDetails-sku")
+        if style_id_tag:
+            return style_id_tag.text.strip()
+
+    except Exception as e:
+        print(f"❌ Error fetching style ID from {product_url}: {e}")
+    
+    return None
+
+
+# Run scraper when executed directly
+if __name__ == "__main__":
+    deals = get_footlocker_deals()
+    print(deals)
