@@ -32,7 +32,7 @@ def get_footlocker_deals():
                     product_name = card.find_element(By.CLASS_NAME, "ProductCard-title").text
                 except:
                     product_name = card.find_element(By.CLASS_NAME, "ProductName-primary").text  # Fallback
-                
+
                 if not product_name:
                     product_name = "Unknown Product"  # Ensure a name is always present
                 
@@ -49,9 +49,9 @@ def get_footlocker_deals():
                     if match:
                         footlocker_product_id = match.group(1)
 
-                # Construct the correct Foot Locker product page URL (FIXED NO SPACE)
+                # Construct the correct Foot Locker product page URL (Ensuring no space)
                 if footlocker_product_id:
-                    product_url = f"https://www.footlocker.com/product/~/ {footlocker_product_id}.html".replace(" ~/ ", "~/")  # Fix potential space issue
+                    product_url = f"https://www.footlocker.com/product/~/{footlocker_product_id}.html"
                 else:
                     product_url = raw_product_url  # Fallback if extraction fails
 
@@ -80,29 +80,23 @@ def get_footlocker_deals():
 
                 # Visit the product page to extract the "Supplier-sku #" (Nike's Style ID)
                 driver.get(product_url)
-                time.sleep(5)  # Allow time for the product page to load (increased wait time)
+                time.sleep(10)  # Increased wait time to ensure JavaScript loads
 
-                # DEBUG: Print full product page content to see if "Supplier-sku #" exists
+                # Try extracting Supplier-sku # using different approaches
+                style_id = None
+
+                # Approach 1: Look for "Supplier-sku #" text in page source
                 full_page_text = driver.page_source
                 print("\n🔍 DEBUG: Checking for Supplier-sku # in Foot Locker's HTML...\n")
-                print(full_page_text[:2000])  # Print first 2000 characters
+                print(full_page_text[:2000])  # Print first 2000 characters for debugging
 
-                # First attempt: Regular expression to find "Supplier-sku #"
-                try:
-                    match = re.search(r"Supplier-sku\s*#:\s*([\w-]+)", full_page_text)
-                    if match:
-                        style_id = match.group(1).strip()
-                        print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
-                    else:
-                        style_id = None
-                        print(f"⚠️ Foot Locker Style ID Not Found via text scan.")
+                match = re.search(r"Supplier-sku\s*#:\s*([\w-]+)", full_page_text)
+                if match:
+                    style_id = match.group(1).strip()
+                    print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
 
-                except Exception as e:
-                    style_id = None
-                    print(f"⚠️ Error extracting Foot Locker Style ID: {e}")
-
-                # Second attempt: Search for JSON metadata in the page
-                if style_id is None:
+                # Approach 2: Extract JSON Data
+                if not style_id:
                     try:
                         json_match = re.search(r'window\.__PRELOADED_STATE__\s*=\s*({.*?});', full_page_text, re.DOTALL)
                         if json_match:
@@ -112,6 +106,15 @@ def get_footlocker_deals():
                                 print(f"✅ Extracted Style ID from JSON: {style_id}")
                     except Exception as e:
                         print(f"⚠️ Error extracting Supplier-sku # from JSON: {e}")
+
+                # Approach 3: Check page elements directly
+                if not style_id:
+                    try:
+                        supplier_sku_element = driver.find_element(By.XPATH, "//div[contains(text(), 'Supplier-sku')]")
+                        style_id = supplier_sku_element.text.split(":")[-1].strip()
+                        print(f"✅ Extracted Style ID via Element Search: {style_id}")
+                    except:
+                        print(f"⚠️ No Supplier-sku # found in page elements.")
 
                 # Store deal information
                 deals.append({
