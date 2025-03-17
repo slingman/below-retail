@@ -5,8 +5,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import get_driver
 from utils.promo_codes import apply_promo_code
 
-def scrape_footlocker():
-    url = "https://www.footlocker.com/en/category/shoes.html"  # Update URL if needed
+def get_footlocker_deals():  # Renamed function to match import in scrape_deals.py
+    url = "https://www.footlocker.com/en/category/shoes.html"
     driver = get_driver()
 
     try:
@@ -69,6 +69,6 @@ def scrape_footlocker():
 
 # Test run
 if __name__ == "__main__":
-    deals = scrape_footlocker()
+    deals = get_footlocker_deals()  # Use the new function name
     for deal in deals:
         print(deal)
