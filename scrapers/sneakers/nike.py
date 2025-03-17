@@ -10,26 +10,31 @@ def get_nike_deals():
     deals = {}
 
     response = requests.get(NIKE_SEARCH_URL)
-    
-    if response.status_code == 200:
-        data = response.json()
-        for product in data.get("products", []):
-            name = product.get("title")
-            price = product.get("price", {}).get("current_price")
-            link = product.get("url")
-            style_id = product.get("style_color", "UNKNOWN")
 
-            if style_id != "UNKNOWN":
-                deals[style_id] = {
-                    "name": name,
-                    "style_id": style_id,
-                    "image": product.get("image_url"),
-                    "prices": [{"store": "Nike", "price": price, "link": link}]
-                }
+    if response.status_code != 200:
+        print(f"❌ Nike request failed! Status Code: {response.status_code}")
+        return {}
 
-        print(f"✅ Found {len(deals)} Nike Air Max 1 deals.")
+    try:
+        data = response.json()  # Try parsing JSON
+    except requests.exceptions.JSONDecodeError:
+        print("❌ Error: Nike API did not return valid JSON.")
+        print("🔍 Response content:", response.text)  # Print response for debugging
+        return {}
 
-    else:
-        print(f"❌ Failed to fetch Nike deals. Status Code: {response.status_code}")
+    for product in data.get("products", []):
+        name = product.get("title")
+        price = product.get("price", {}).get("current_price")
+        link = product.get("url")
+        style_id = product.get("style_color", "UNKNOWN")
 
+        if style_id != "UNKNOWN":
+            deals[style_id] = {
+                "name": name,
+                "style_id": style_id,
+                "image": product.get("image_url"),
+                "prices": [{"store": "Nike", "price": price, "link": link}]
+            }
+
+    print(f"✅ Found {len(deals)} Nike Air Max 1 deals.")
     return deals
