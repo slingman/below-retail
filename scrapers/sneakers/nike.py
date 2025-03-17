@@ -1,40 +1,64 @@
+from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import time
-from utils.selenium_setup import get_selenium_driver
 
 def get_nike_deals():
-    driver = get_selenium_driver()
-
     url = "https://www.nike.com/w?q=air+max+1"
-    driver.get(url)
-    time.sleep(5)  # Wait for the page to load
 
-    deals = []
+    # Set up Selenium WebDriver
+    service = Service(ChromeDriverManager().install())
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Run in headless mode for efficiency
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        products = driver.find_elements(By.CSS_SELECTOR, "div.product-card")
-        for product in products:
+        driver.get(url)
+        time.sleep(5)  # Allow time for page to load
+
+        deals = []
+        product_cards = driver.find_elements(By.CLASS_NAME, "product-card")
+
+        for card in product_cards:
             try:
-                name = product.find_element(By.CSS_SELECTOR, "div.product-card__title").text
-                price = product.find_element(By.CSS_SELECTOR, "div.product-price").text
-                product_url = product.find_element(By.CSS_SELECTOR, "a.product-card__link-overlay").get_attribute("href")
+                # Extract Product Name
+                product_name = card.find_element(By.CLASS_NAME, "product-card__title").text
 
-                style_id_element = product.find_element(By.CSS_SELECTOR, "div.product-card__style-color")
-                style_id = style_id_element.text.split(" ")[-1] if style_id_element else "Unknown"
+                # Extract Product URL
+                product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
 
+                # Extract Image URL
+                image_url = card.find_element(By.CLASS_NAME, "product-card__hero-image").get_attribute("src")
+
+                # Extract Prices
+                try:
+                    sale_price = card.find_element(By.CSS_SELECTOR, "div[data-testid='product-price-reduced']").text
+                except:
+                    sale_price = None
+
+                try:
+                    original_price = card.find_element(By.CSS_SELECTOR, "div[data-testid='product-price']").text
+                except:
+                    original_price = sale_price  # If no original price, assume no discount
+
+                # Store deal information
                 deals.append({
                     "store": "Nike",
-                    "name": name,
-                    "price": price,
-                    "url": product_url,
-                    "style_id": style_id
+                    "product_name": product_name,
+                    "product_url": product_url,
+                    "image_url": image_url,
+                    "sale_price": sale_price,
+                    "original_price": original_price,
                 })
+
             except Exception as e:
                 print(f"⚠️ Skipping a product due to error: {e}")
 
-    except Exception as e:
-        print(f"❌ Error fetching Nike deals: {e}")
+        return deals
 
-    driver.quit()
-    return deals
+    finally:
+        driver.quit()
