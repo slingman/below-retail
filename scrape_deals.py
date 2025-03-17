@@ -1,31 +1,32 @@
 import json
 from scrapers.sneakers.nike import get_nike_deals
 from scrapers.sneakers.footlocker import get_footlocker_deals
-from utils.file_manager import save_deals
+
+DEALS_FILE = "deals.json"
 
 def main():
     print("\n🔍 Searching for Nike Air Max 1 at Nike and Foot Locker...\n")
 
-    # Fetch deals from Nike
+    # Fetch deals
     nike_deals = get_nike_deals()
     footlocker_deals = get_footlocker_deals()
 
-    # Merge deals from both stores using style_id as the key
-    merged_deals = {}
+    combined_deals = {}
 
-    for style_id, product in nike_deals.items():
-        merged_deals[style_id] = product
+    # Merge Foot Locker deals with Nike deals based on style_id
+    for style_id, nike_product in nike_deals.items():
+        if style_id in footlocker_deals:
+            # Combine Nike & Foot Locker prices
+            nike_product["prices"].extend(footlocker_deals[style_id]["prices"])
 
-    for style_id, product in footlocker_deals.items():
-        if style_id in merged_deals:
-            merged_deals[style_id]["prices"].extend(product["prices"])
-        else:
-            merged_deals[style_id] = product
+        combined_deals[style_id] = nike_product
 
-    # Save deals to JSON
-    save_deals(merged_deals)
+    # Save deals
+    with open(DEALS_FILE, "w") as file:
+        json.dump(combined_deals, file, indent=4)
 
-    print(f"\n✅ Scraped {len(merged_deals)} deals for Nike Air Max 1!\n")
+    print(f"\n✅ Deals successfully saved to {DEALS_FILE}\n")
+    print(f"✅ Scraped {len(combined_deals)} deals for Nike Air Max 1!")
 
 if __name__ == "__main__":
     main()
