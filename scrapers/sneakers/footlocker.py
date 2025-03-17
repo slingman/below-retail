@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import get_driver
 from utils.promo_codes import apply_promo_code
 
-def scrape_footlocker():
+def get_footlocker_deals():
     url = "https://www.footlocker.com/en/category/shoes.html"  # Update URL if needed
     driver = get_driver()
 
