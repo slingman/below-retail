@@ -6,21 +6,20 @@ from utils.selenium_setup import get_driver
 from utils.promo_codes import apply_promo_code
 
 def get_footlocker_deals():
-    url = "https://www.footlocker.com/en/category/shoes.html"  # Update URL if needed
+    url = "https://www.footlocker.com/en/category/shoes.html"
     driver = get_driver()
 
+    deals = []
+    
     try:
         driver.get(url)
         time.sleep(5)  # Allow time for dynamic content to load
 
         wait = WebDriverWait(driver, 10)
 
-        # Get all product cards
         product_cards = wait.until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".ProductCard"))
         )
-
-        deals = []
 
         for card in product_cards:
             try:
@@ -32,21 +31,20 @@ def get_footlocker_deals():
                 try:
                     price_element = card.find_element(By.CSS_SELECTOR, ".ProductPrice")
                     price_text = price_element.text.strip().replace("$", "")
-                    price = float(price_text)  # Convert price to float
+                    price = float(price_text)
                 except:
-                    price = None  # Handle cases where price is missing
+                    price = None
 
                 # Extract product link
                 try:
                     link_element = card.find_element(By.CSS_SELECTOR, "a")
                     product_link = link_element.get_attribute("href")
                 except:
-                    product_link = None  # Handle missing links
+                    product_link = None
 
-                # Check for applicable promo codes
+                # Apply promo code if available
                 final_price, promo_code = apply_promo_code("Foot Locker", price)
 
-                # Store extracted data
                 deals.append({
                     "store": "Foot Locker",
                     "name": product_name,
@@ -59,13 +57,13 @@ def get_footlocker_deals():
             except Exception as e:
                 print(f"Error processing a product: {e}")
 
-        driver.quit()
-        return deals
-
     except Exception as e:
         print(f"Error scraping Foot Locker: {e}")
-        driver.quit()
-        return []
+
+    finally:
+        driver.quit()  # Ensuring WebDriver closes only after everything is done
+
+    return deals
 
 # Test run
 if __name__ == "__main__":
