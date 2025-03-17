@@ -1,68 +1,50 @@
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-
-# Initialize Selenium WebDriver
-def get_driver():
-    options = Options()
-    options.add_argument("--headless")  # Run without UI
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    
-    service = Service(ChromeDriverManager().install())  # Automatically download correct ChromeDriver
-    return webdriver.Chrome(service=service, options=options)
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
+from scrapers.utils.selenium_setup import get_chrome_driver
+import time
 
 def get_footlocker_deals():
-    driver = get_driver()
-    base_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
-    print(f"\n🔍 Scraping Foot Locker: {base_url}")
-    
-    driver.get(base_url)
-    time.sleep(5)  # Allow page to load
+    """Scrapes Nike Air Max 1 deals from Foot Locker."""
+    driver = get_chrome_driver()
+    url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
-    deals = []
-    product_links = driver.find_elements(By.CSS_SELECTOR, "a.ProductCard-link")
-    
-    for link in product_links[:15]:  # Limit to first 15 products for speed
-        product_url = link.get_attribute("href")
-        if product_url:
-            try:
-                deals.append(scrape_footlocker_product(driver, product_url))
-            except Exception as e:
-                print(f"⚠️ Error processing product: {product_url}, Message: {e}")
-    
-    driver.quit()
-    return [deal for deal in deals if deal]  # Filter out None values
-
-def scrape_footlocker_product(driver, url):
-    """Scrape individual Foot Locker product page"""
-    print(f"🔗 Visiting {url}")
+    print(f"\n🔍 Scraping Foot Locker: {url}")
     driver.get(url)
     time.sleep(3)
 
-    try:
-        name = driver.find_element(By.CSS_SELECTOR, "h1.ProductName-primary").text.strip()
-    except:
-        name = "Unknown"
+    deals = []
 
     try:
-        price = driver.find_element(By.CSS_SELECTOR, ".ProductPrice-final").text.strip()
-    except:
-        price = "Price not found"
+        products = driver.find_elements(By.CSS_SELECTOR, "div.ProductCard")
 
-    try:
-        supplier_sku = driver.find_element(By.XPATH, "//div[contains(text(),'Supplier-sku')]/following-sibling::div").text.strip()
-    except:
-        supplier_sku = "Unknown"
+        for product in products:
+            try:
+                link_element = product.find_element(By.TAG_NAME, "a")
+                product_url = link_element.get_attribute("href")
+                name = product.find_element(By.CSS_SELECTOR, "div.ProductName-primary").text
+                price = product.find_element(By.CSS_SELECTOR, "div.ProductPrice").text
 
-    return {
-        "name": name,
-        "price_final": price,
-        "link": url,
-        "supplier_sku": supplier_sku  # This now correctly matches Nike’s "Style ID"
-    }
+                # Try to fetch style ID if available
+                try:
+                    style_id_element = product.find_element(By.CSS_SELECTOR, "span.ProductCard-style")
+                    style_id = style_id_element.text.split(":")[-1].strip()
+                except NoSuchElementException:
+                    style_id = "N/A"
 
+                deals.append({
+                    "store": "Foot Locker",
+                    "name": name,
+                    "price": price,
+                    "url": product_url,
+                    "style_id": style_id
+                })
+
+            except (NoSuchElementException, StaleElementReferenceException):
+                print("⚠️ Skipping a product due to missing/stale elements")
+    
+    except TimeoutException:
+        print("❌ Foot Locker page failed to load properly.")
+
+    driver.quit()
+    return deals
