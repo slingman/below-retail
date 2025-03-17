@@ -1,7 +1,7 @@
 import json
 import os
-from sneakers.nike import get_nike_deals
-from sneakers.footlocker import get_footlocker_deals
+from scrapers.sneakers.nike import get_nike_deals
+from scrapers.sneakers.footlocker import get_footlocker_deals
 
 def compare_prices(nike_deals, footlocker_deals):
     """Compare Nike and Foot Locker deals based on matching style IDs."""
