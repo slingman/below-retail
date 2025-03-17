@@ -1,11 +1,15 @@
 import json
-from scrapers.nike_scraper import scrape_nike
-from scrapers.footlocker_scraper import scrape_footlocker
-from scrapers.hibbett_scraper import scrape_hibbett
-from scrapers.nordstrom_scraper import scrape_nordstrom
-from scrapers.dicks_scraper import scrape_dicks
-from scrapers.goat_scraper import scrape_goat
-from scrapers.stockx_scraper import scrape_stockx
+from scrapers.sneakers.nike import scrape_nike
+from scrapers.sneakers.footlocker import scrape_footlocker
+from scrapers.sneakers.adidas import scrape_adidas
+from scrapers.sneakers.hibbett import scrape_hibbett
+from scrapers.sneakers.nordstrom import scrape_nordstrom
+from scrapers.sneakers.dicks import scrape_dicks
+from scrapers.sneakers.goat import scrape_goat
+from scrapers.sneakers.stockx import scrape_stockx
+from scrapers.tech.amazon import scrape_amazon
+from scrapers.tech.bestbuy import scrape_bestbuy
+from scrapers.tech.walmart import scrape_walmart
 
 # Search term (limited to Nike Air Max 1 for now)
 search_terms = ["Nike Air Max 1"]
