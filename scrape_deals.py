@@ -3,29 +3,23 @@ from scrapers.sneakers.footlocker import scrape_footlocker
 from utils.file_manager import save_deals
 
 def main():
-    keyword = "Nike Air Max 1"
-    print(f"\n🔍 Searching for {keyword} at Nike and Foot Locker...\n")
+    print("\n🔍 Searching for Nike Air Max 1 at Nike and Foot Locker...\n")
 
-    # Scrape Nike
-    nike_deals = scrape_nike(keyword)
-    
-    # Scrape Foot Locker
-    footlocker_deals = scrape_footlocker(keyword)
+    nike_deals = scrape_nike("air max 1")
+    footlocker_deals = scrape_footlocker("air max 1")
 
-    # Combine and compare prices based on style ID
-    all_deals = {}
-    
-    for deal in nike_deals + footlocker_deals:
-        style_id = deal.get("style_id")
-        if style_id:
-            if style_id not in all_deals:
-                all_deals[style_id] = {"name": deal["name"], "image": deal["image"], "prices": []}
-            all_deals[style_id]["prices"].append({"store": deal["store"], "price": deal["price"], "link": deal["link"]})
+    # Ensure both scrapers return lists of deals
+    nike_deals = list(nike_deals.values()) if isinstance(nike_deals, dict) else nike_deals
+    footlocker_deals = list(footlocker_deals.values()) if isinstance(footlocker_deals, dict) else footlocker_deals
 
-    # Save deals to JSON
+    all_deals = nike_deals + footlocker_deals
+
+    if not all_deals:
+        print("❌ No deals found!")
+        return
+
     save_deals(all_deals)
-    
-    print(f"\n✅ Scraped {len(all_deals)} sneaker deals comparing Nike vs. Foot Locker!")
+    print(f"\n✅ Scraped {len(all_deals)} deals for Nike Air Max 1!\n")
 
 if __name__ == "__main__":
     main()
