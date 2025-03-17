@@ -12,7 +12,7 @@ def get_nike_deals():
     print("🔍 Searching Nike for Air Max 1...")
     deals = {}
 
-    driver = get_selenium_driver(headless=True)  # Run in headless mode for speed
+    driver = get_selenium_driver(headless=True)  # Headless for efficiency
 
     try:
         driver.get(NIKE_SEARCH_URL)
@@ -30,23 +30,26 @@ def get_nike_deals():
                 price_element = product.find_element(By.CLASS_NAME, "product-price")
                 link_element = product.find_element(By.TAG_NAME, "a")
 
+                # Ensure elements exist before accessing their text
                 if not name_element or not price_element or not link_element:
-                    continue  # Skip if any essential info is missing
+                    continue  
 
                 name = name_element.text.strip()
                 price = price_element.text.replace("$", "").strip()
                 link = link_element.get_attribute("href")
 
-                # Extract style ID from URL (Nike uses "/STYLE_ID" at the end of the product page URL)
+                # Extract style ID from Nike URL
                 style_id = link.split("/")[-1] if "/" in link else None
 
-                if style_id and price.replace(".", "").isdigit():  # Ensure valid price
-                    deals[style_id] = {
-                        "name": name,
-                        "style_id": style_id,
-                        "image": "",  # Placeholder (we can extract dynamically)
-                        "prices": [{"store": "Nike", "price": float(price), "link": link}]
-                    }
+                if not style_id or not price.replace(".", "").isdigit():  
+                    continue  # Skip invalid entries
+
+                deals[style_id] = {
+                    "name": name,
+                    "style_id": style_id,
+                    "image": "",  # Placeholder
+                    "prices": [{"store": "Nike", "price": float(price), "link": link}]
+                }
 
             except Exception as e:
                 print(f"⚠️ Error processing product: {e}")
@@ -59,4 +62,4 @@ def get_nike_deals():
         return {}
 
     finally:
-        driver.quit()  # Close Selenium driver
+        driver.quit()  # Always close Selenium driver
