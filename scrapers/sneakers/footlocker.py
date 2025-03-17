@@ -5,7 +5,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 
 def get_footlocker_deals():
-    url = "https://www.footlocker.com/product/nike-air-max-1-mens/Z5808400.html"  # Direct product page
+    url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
@@ -20,52 +20,71 @@ def get_footlocker_deals():
         driver.get(url)
         time.sleep(5)  # Allow time for page to load
 
-        # Extract Product Name
-        try:
-            product_name = driver.find_element(By.CLASS_NAME, "ProductName-primary").text
-        except:
-            product_name = "Unknown Product"
+        deals = []
+        product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
 
-        # Extract Product URL
-        product_url = url  # Since we're on the product page
+        for card in product_cards:
+            try:
+                # Extract Product Name
+                try:
+                    product_name = card.find_element(By.CLASS_NAME, "ProductCard-title").text
+                except:
+                    product_name = card.find_element(By.CLASS_NAME, "ProductName-primary").text  # Fallback
+                
+                if not product_name:
+                    product_name = "Unknown Product"  # Ensure a name is always present
+                
+                # Extract Product URL
+                product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
 
-        # Extract Style ID (Supplier-sku #)
-        style_id_text = None
-        try:
-            details_section = driver.find_element(By.CLASS_NAME, "ProductDetails")
-            details_text = details_section.text
-            print("\nDEBUG: Full product details text from Foot Locker:\n", details_text)  # Debug print
+                # Extract Image URL
+                try:
+                    image_url = card.find_element(By.CLASS_NAME, "ProductCard-image--primary").get_attribute("src")
+                except:
+                    image_url = None  # Allow for cases where no image is found
 
-            for line in details_text.split("\n"):
-                if "Supplier-sku #" in line:
-                    style_id_text = line.split("#")[-1].strip()
-                    print(f"✅ Extracted Style ID from Foot Locker: {style_id_text}")  # Debug print
-                    break
-        except:
-            print("⚠️ Unable to extract style ID from Foot Locker")
-            style_id_text = None
+                # Extract Prices
+                try:
+                    sale_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__sale").text
+                except:
+                    sale_price = None
 
-        # Extract Price
-        try:
-            price_text = driver.find_element(By.CLASS_NAME, "ProductPrice").text
-            print(f"DEBUG: Raw price text from Foot Locker: {price_text}")  # Debug print
-            price = float(price_text.replace("$", "").split()[0])  # Convert to float
-        except:
-            print("⚠️ Unable to extract price from Foot Locker")
-            price = None  # If price is missing
+                try:
+                    original_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__regular").text
+                except:
+                    original_price = sale_price  # If no original price, assume no discount
 
-        # Store deal information
-        deal = {
-            "store": "Foot Locker",
-            "product_name": product_name,
-            "product_url": product_url,
-            "price": price,
-            "style_id": style_id_text,
-        }
+                # Ensure at least one valid price is present
+                if not sale_price and not original_price:
+                    continue  # Skip products with no price
 
-        print(f"🟢 Foot Locker Product Found: {product_name} | Price: {price} | Style ID: {style_id_text}")
+                # Visit the product page to extract the "Supplier-sku #" (Nike's Style ID)
+                driver.get(product_url)
+                time.sleep(3)  # Allow time for the product page to load
 
-        return deal
+                try:
+                    style_id_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
+                    style_id = style_id_element.text.strip()
+                    print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
+                except:
+                    style_id = None
+                    print(f"⚠️ Foot Locker Style ID Not Found for {product_name}")
+
+                # Store deal information
+                deals.append({
+                    "store": "Foot Locker",
+                    "product_name": product_name,  
+                    "product_url": product_url,    
+                    "image_url": image_url,    
+                    "price": sale_price if sale_price else original_price,  
+                    "original_price": original_price,
+                    "style_id": style_id,  # Supplier-sku # is Nike's Style ID
+                })
+
+            except Exception as e:
+                print(f"⚠️ Skipping a product due to error: {e}")
+
+        return deals
 
     finally:
         driver.quit()
