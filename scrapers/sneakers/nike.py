@@ -7,7 +7,7 @@ from utils.promo_codes import apply_promo_code
 
 def get_nike_deals():
     url = "https://www.nike.com/w/mens-air-max-1-shoes-8rntqznik1"  # Update if needed
-    driver = get_driver(headless=True)  # Use headless mode for efficiency
+    driver = get_driver(headless=True)  # Now properly supports headless mode
 
     try:
         driver.get(url)
