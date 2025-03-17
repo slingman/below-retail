@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import get_driver
-from utils.promo_code import apply_promo_code
+from utils.promo_codes import apply_promo_code
 
 def scrape_footlocker():
     url = "https://www.footlocker.com/en/category/shoes.html"  # Update URL if needed
