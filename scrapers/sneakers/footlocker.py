@@ -3,9 +3,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import re
 
 def get_footlocker_deals():
-    url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
+    search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
@@ -17,7 +18,7 @@ def get_footlocker_deals():
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        driver.get(url)
+        driver.get(search_url)
         time.sleep(5)  # Allow time for page to load
 
         deals = []
@@ -34,8 +35,26 @@ def get_footlocker_deals():
                 if not product_name:
                     product_name = "Unknown Product"  # Ensure a name is always present
                 
-                # Extract Product URL
-                product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
+                # Extract Raw Product URL
+                try:
+                    raw_product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
+                except:
+                    raw_product_url = None
+
+                # Extract the Foot Locker Product # from the URL
+                footlocker_product_id = None
+                if raw_product_url:
+                    match = re.search(r"/([^/]+)\.html", raw_product_url)
+                    if match:
+                        footlocker_product_id = match.group(1)
+
+                # Construct the correct Foot Locker product page URL
+                if footlocker_product_id:
+                    product_url = f"https://www.footlocker.com/product/~/{footlocker_product_id}.html"
+                else:
+                    product_url = raw_product_url  # Fallback if extraction fails
+
+                print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
                 # Extract Image URL
                 try:
@@ -62,13 +81,18 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(3)  # Allow time for the product page to load
 
+                # DEBUG: Print full product page content
+                full_page_text = driver.find_element(By.TAG_NAME, "body").text
+                print("\nDEBUG: Full product details text from Foot Locker:\n", full_page_text)
+
                 try:
+                    # Look for "Supplier-sku #:" on the page
                     style_id_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
                     style_id = style_id_element.text.strip()
                     print(f"✅ Foot Locker Style ID Extracted (Supplier-sku #): {style_id}")
-                except:
+                except Exception as e:
                     style_id = None
-                    print(f"⚠️ Foot Locker Style ID Not Found for {product_name}")
+                    print(f"⚠️ Foot Locker Style ID Not Found for {product_name}. Error: {e}")
 
                 # Store deal information
                 deals.append({
