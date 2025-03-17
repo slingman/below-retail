@@ -1,66 +1,74 @@
 import time
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import get_driver
-
-
-NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+from utils.promo_codes import apply_promo_code
 
 def get_nike_deals():
-    """
-    Scrapes Nike's website for Air Max 1 deals using Selenium.
-    Returns a dictionary where the key is the style_id.
-    """
-    print("🔍 Searching Nike for Air Max 1...")
-    deals = {}
-
-    driver = get_driver(headless=True)  # Headless for efficiency
+    url = "https://www.nike.com/w/mens-air-max-1-shoes-8rntqznik1"  # Update if needed
+    driver = get_driver(headless=True)  # Use headless mode for efficiency
 
     try:
-        driver.get(NIKE_SEARCH_URL)
-        time.sleep(5)  # Allow page to load
+        driver.get(url)
+        time.sleep(5)  # Allow dynamic content to load
 
-        products = driver.find_elements(By.CLASS_NAME, "product-card__body")
+        wait = WebDriverWait(driver, 10)
 
-        if not products:
-            print("⚠️ No products found. Nike may have changed its layout.")
-            return {}
+        # Get all product cards
+        product_cards = wait.until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "[data-test='product-card']"))
+        )
 
-        for product in products:
+        deals = []
+
+        for card in product_cards:
             try:
-                name_element = product.find_element(By.CLASS_NAME, "product-card__title")
-                price_element = product.find_element(By.CLASS_NAME, "product-price")
-                link_element = product.find_element(By.TAG_NAME, "a")
+                # Extract product name
+                title_element = card.find_element(By.CSS_SELECTOR, "[data-test='product-title']")
+                product_name = title_element.text.strip()
 
-                # Ensure elements exist before accessing their text
-                if not name_element or not price_element or not link_element:
-                    continue  
+                # Extract product price
+                try:
+                    price_element = card.find_element(By.CSS_SELECTOR, "[data-test='product-price']")
+                    price_text = price_element.text.strip().replace("$", "")
+                    price = float(price_text)  # Convert price to float
+                except:
+                    price = None  # Handle cases where price is missing
 
-                name = name_element.text.strip()
-                price = price_element.text.replace("$", "").strip()
-                link = link_element.get_attribute("href")
+                # Extract product link
+                try:
+                    link_element = card.find_element(By.CSS_SELECTOR, "a")
+                    product_link = link_element.get_attribute("href")
+                except:
+                    product_link = None  # Handle missing links
 
-                # Extract style ID from Nike URL
-                style_id = link.split("/")[-1] if "/" in link else None
+                # Check for applicable promo codes
+                final_price, promo_code = apply_promo_code("Nike", price)
 
-                if not style_id or not price.replace(".", "").isdigit():  
-                    continue  # Skip invalid entries
-
-                deals[style_id] = {
-                    "name": name,
-                    "style_id": style_id,
-                    "image": "",  # Placeholder
-                    "prices": [{"store": "Nike", "price": float(price), "link": link}]
-                }
+                # Store extracted data
+                deals.append({
+                    "store": "Nike",
+                    "name": product_name,
+                    "price": price,
+                    "final_price": final_price,
+                    "promo_code": promo_code,
+                    "link": product_link
+                })
 
             except Exception as e:
-                print(f"⚠️ Error processing product: {e}")
+                print(f"Error processing a product: {e}")
 
-        print(f"✅ Found {len(deals)} Nike Air Max 1 deals.")
+        driver.quit()
         return deals
 
     except Exception as e:
-        print(f"❌ Nike Scraper Error: {e}")
-        return {}
+        print(f"Error scraping Nike: {e}")
+        driver.quit()
+        return []
 
-    finally:
-        driver.quit()  # Always close Selenium driver
+# Test run
+if __name__ == "__main__":
+    deals = get_nike_deals()
+    for deal in deals:
+        print(deal)
