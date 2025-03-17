@@ -50,7 +50,7 @@ def get_footlocker_deals():
 
                 # Construct the correct Foot Locker product page URL
                 if footlocker_product_id:
-                    product_url = f"https://www.footlocker.com/product/~/ {footlocker_product_id}.html"
+                    product_url = f"https://www.footlocker.com/product/~/{footlocker_product_id}.html"
                 else:
                     product_url = raw_product_url  # Fallback if extraction fails
 
