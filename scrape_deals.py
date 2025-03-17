@@ -3,7 +3,7 @@ from scrapers.sneakers.nike import get_nike_deals
 from scrapers.sneakers.footlocker import get_footlocker_deals
 
 # Target Style ID to compare
-TARGET_STYLE_ID = "FZ5808-400"
+TARGET_STYLE_ID = "FZ5808-400"  # This is Nike's Style ID
 
 def find_matching_product(nike_deals, footlocker_deals, target_style_id):
     """
@@ -15,13 +15,13 @@ def find_matching_product(nike_deals, footlocker_deals, target_style_id):
 
     # Search for the product with the given style ID on Nike
     for deal in nike_deals:
-        if deal["style_id"] == target_style_id:
+        if isinstance(deal, dict) and deal.get("style_id") == target_style_id:
             nike_product = deal
             break
 
-    # Search for the product with the given style ID on Foot Locker
+    # Search for the product with the given style ID on Foot Locker (using "Supplier-sku #")
     for deal in footlocker_deals:
-        if deal["style_id"] == target_style_id:
+        if isinstance(deal, dict) and deal.get("style_id") == target_style_id:
             footlocker_product = deal
             break
 
@@ -45,6 +45,12 @@ nike_deals = get_nike_deals()
 
 print("\nFetching Foot Locker deal...")
 footlocker_deals = get_footlocker_deals()
+
+# Ensure we actually have lists
+if not isinstance(nike_deals, list):
+    nike_deals = []
+if not isinstance(footlocker_deals, list):
+    footlocker_deals = []
 
 # Compare the specific product by style ID
 nike_product, footlocker_product, cheaper_store = find_matching_product(nike_deals, footlocker_deals, TARGET_STYLE_ID)
