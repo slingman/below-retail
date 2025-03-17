@@ -1,36 +1,35 @@
 import requests
-from bs4 import BeautifulSoup
-from utils.selenium_setup import get_selenium_driver
 
-NIKE_SEARCH_URL = "https://www.nike.com/w?q={query}&vst={query}"
+NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
 
-def scrape_nike(sneaker_name):
-    search_url = NIKE_SEARCH_URL.format(query=sneaker_name.replace(" ", "%20"))
-    driver = get_selenium_driver()
-    driver.get(search_url)
+def get_nike_deals():
+    """
+    Scrapes Nike website for Air Max 1 deals and returns them in a structured format.
+    """
+    print("🔍 Searching Nike for Air Max 1...")
+    deals = {}
+
+    response = requests.get(NIKE_SEARCH_URL)
     
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    products = []
+    if response.status_code == 200:
+        data = response.json()
+        for product in data.get("products", []):
+            name = product.get("title")
+            price = product.get("price", {}).get("current_price")
+            link = product.get("url")
+            style_id = product.get("style_color", "UNKNOWN")
 
-    for product in soup.find_all("div", class_="product-card"):
-        try:
-            name = product.find("div", class_="product-card__title").text.strip()
-            price = float(product.find("div", class_="product-price").text.replace("$", "").strip())
-            link = "https://www.nike.com" + product.find("a")["href"]
-            image = product.find("img")["src"] if product.find("img") else ""
+            if style_id != "UNKNOWN":
+                deals[style_id] = {
+                    "name": name,
+                    "style_id": style_id,
+                    "image": product.get("image_url"),
+                    "prices": [{"store": "Nike", "price": price, "link": link}]
+                }
 
-            # Extract Style ID from URL
-            style_id = link.split("/")[-1] if "/" in link else "Unknown"
+        print(f"✅ Found {len(deals)} Nike Air Max 1 deals.")
 
-            products.append({
-                "name": name,
-                "price": price,
-                "link": link,
-                "image": image,
-                "style_id": style_id
-            })
-        except:
-            continue
+    else:
+        print(f"❌ Failed to fetch Nike deals. Status Code: {response.status_code}")
 
-    driver.quit()
-    return products
+    return deals
