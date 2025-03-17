@@ -4,13 +4,13 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
-def get_footlocker_deals():
-    url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
+def get_footlocker_deal(target_style_id):
+    url = "https://www.footlocker.com/product/nike-air-max-1-mens/Z5808400.html"  # Single product page
 
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in headless mode for efficiency
+    options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -20,71 +20,42 @@ def get_footlocker_deals():
         driver.get(url)
         time.sleep(5)  # Allow time for page to load
 
-        deals = []
-        product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
+        # Extract Product Name
+        product_name = driver.find_element(By.TAG_NAME, "h1").text.strip()
 
-        for card in product_cards:
-            try:
-                # Extract Product Name (try multiple possible class names)
-                try:
-                    product_name = card.find_element(By.CLASS_NAME, "ProductCard-title").text
-                except:
-                    product_name = card.find_element(By.CLASS_NAME, "ProductName-primary").text  # Fallback
-                
-                if not product_name:
-                    product_name = "Unknown Product"  # Ensure a name is always present
+        # Extract Style ID (from product page content)
+        style_id_text = None
+        try:
+            details_section = driver.find_element(By.CLASS_NAME, "ProductDetails")
+            details_text = details_section.text
+            for line in details_text.split("\n"):
+                if "Supplier-sku #" in line:
+                    style_id_text = line.split("#")[-1].strip()
+                    break
+        except:
+            style_id_text = None
 
-                # Filter only "Nike Air Max 1"
-                if "Air Max 1" not in product_name:
-                    continue  # Skip unrelated products
+        # Extract Price
+        try:
+            price_text = driver.find_element(By.CLASS_NAME, "ProductPrice").text
+            price = float(price_text.replace("$", "").split()[0])  # Convert to float
+        except:
+            price = None  # If price is missing
 
-                # Extract Product URL
-                product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
+        # Validate Style ID
+        final_style_id = style_id_text if style_id_text else None
 
-                # Extract Image URL
-                try:
-                    image_url = card.find_element(By.CLASS_NAME, "ProductCard-image--primary").get_attribute("src")
-                except:
-                    image_url = None  # Allow for cases where no image is found
-
-                # Extract Prices
-                try:
-                    sale_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__sale").text
-                except:
-                    sale_price = None
-
-                try:
-                    original_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__regular").text
-                except:
-                    original_price = sale_price  # If no original price, assume no discount
-
-                # Ensure at least one valid price is present
-                if not sale_price and not original_price:
-                    continue  # Skip products with no price
-
-                # Extract Style ID (from product page URL)
-                try:
-                    style_id = product_url.split("/")[-1].split(".")[0]  # Extract last part of URL before ".html"
-                except:
-                    style_id = None
-
-                # Store deal information
-                deals.append({
-                    "store": "Foot Locker",
-                    "product_name": product_name,  
-                    "product_url": product_url,    
-                    "image_url": image_url,    
-                    "sale_price": sale_price if sale_price else original_price,  
-                    "original_price": original_price,
-                    "style_id": style_id,  
-                })
-
-                print(f"✅ Found: {product_name} ({style_id}) - {sale_price or original_price}")
-
-            except Exception as e:
-                print(f"⚠️ Skipping a product due to error: {e}")
-
-        return deals
+        # Check if this matches the target style ID
+        if final_style_id == target_style_id:
+            return {
+                "store": "Foot Locker",
+                "product_name": product_name,
+                "product_url": url,
+                "price": price,
+                "style_id": final_style_id
+            }
+        else:
+            return None  # No matching product
 
     finally:
         driver.quit()
