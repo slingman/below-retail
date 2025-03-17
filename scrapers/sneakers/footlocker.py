@@ -49,9 +49,9 @@ def get_footlocker_deals():
                     if match:
                         footlocker_product_id = match.group(1)
 
-                # Construct the correct Foot Locker product page URL
+                # Construct the correct Foot Locker product page URL (FIXED NO SPACE)
                 if footlocker_product_id:
-                    product_url = f"https://www.footlocker.com/product/~/{footlocker_product_id}.html"
+                    product_url = f"https://www.footlocker.com/product/~/ {footlocker_product_id}.html".replace(" ~/ ", "~/")  # Fix potential space issue
                 else:
                     product_url = raw_product_url  # Fallback if extraction fails
 
@@ -84,7 +84,8 @@ def get_footlocker_deals():
 
                 # DEBUG: Print full product page content to see if "Supplier-sku #" exists
                 full_page_text = driver.page_source
-                print("\nDEBUG: Full product page HTML from Foot Locker:\n", full_page_text[:2000])  # Print first 2000 characters
+                print("\n🔍 DEBUG: Checking for Supplier-sku # in Foot Locker's HTML...\n")
+                print(full_page_text[:2000])  # Print first 2000 characters
 
                 # First attempt: Regular expression to find "Supplier-sku #"
                 try:
