@@ -1,42 +1,43 @@
+from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from time import sleep
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-# Try importing get_driver normally, but provide a fallback if there's an issue
-try:
-    from scrapers.utils import get_driver  # Normal import if running within package
-except ModuleNotFoundError:
-    import sys
-    sys.path.append("..")  # Ensure the script can find utils.py
-    from utils import get_driver  # Fallback import
+# Set up Selenium
+driver = webdriver.Chrome()
+driver.get("https://www.footlocker.com/search?query=Nike%20Air%20Max%201")
 
-def get_footlocker_deals():
-    driver = get_driver()
+# Wait for products to load
+wait = WebDriverWait(driver, 10)
+products = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".ProductCard")))
 
+deals = []
+
+for product in products:
     try:
-        url = "https://www.footlocker.com/search?query=air+max+1"
-        driver.get(url)
-        sleep(3)  # Allow time for the page to load
+        name = product.find_element(By.CSS_SELECTOR, ".ProductName-primary").text.strip()
+        price_final = product.find_element(By.CSS_SELECTOR, ".ProductPrice-final").text.strip()
 
-        deals = []
-        products = driver.find_elements(By.CSS_SELECTOR, ".ProductCard")  # Update selector if necessary
+        # Check if there’s an original price (i.e., item is on sale)
+        try:
+            price_original = product.find_element(By.CSS_SELECTOR, ".ProductPrice-original").text.strip()
+        except:
+            price_original = price_final  # No sale, just use final price
 
-        for product in products:
-            try:
-                title = product.find_element(By.CSS_SELECTOR, ".ProductCard-name").text
-                price = product.find_element(By.CSS_SELECTOR, ".ProductPrice").text
-                link = product.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+        link = product.find_element(By.CSS_SELECTOR, ".ProductCard-link").get_attribute("href")
 
-                deals.append({
-                    "title": title,
-                    "price": price,
-                    "link": link,
-                    "store": "Foot Locker"
-                })
-            except Exception as e:
-                print(f"Error extracting product details: {e}")
+        deals.append({
+            "name": name,
+            "price_final": price_final,
+            "price_original": price_original,
+            "link": "https://www.footlocker.com" + link,  # Ensure full URL
+        })
 
-        return deals
+    except Exception as e:
+        print(f"Error processing product: {e}")
 
-    finally:
-        driver.quit()
+# Print extracted deals
+for deal in deals:
+    print(deal)
+
+driver.quit()
