@@ -2,63 +2,60 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
 import time
 
+BASE_URL = "https://www.footlocker.com"
+
 def get_footlocker_deals():
-    """Fetches Nike Air Max 1 deals from Foot Locker and extracts supplier SKU for price comparison."""
+    """Scrape Nike Air Max 1 deals from Foot Locker, ensuring correct style ID matching."""
     
-    base_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
     options = Options()
-    options.add_argument("--headless")  # Run Chrome in headless mode
+    options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"  # Ensure correct Chrome binary path
+    options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
 
-    # Use webdriver-manager to handle ChromeDriver installation
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
+    deals = []
+    search_url = f"{BASE_URL}/search?query=nike%20air%20max%201"
+    driver.get(search_url)
+    time.sleep(3)  # Allow page to load
 
-    try:
-        print(f"\n🔍 Scraping Foot Locker: {base_url}")
-        driver.get(base_url)
-        time.sleep(3)
+    products = driver.find_elements("css selector", ".ProductCard")
+    
+    for product in products:
+        try:
+            link_element = product.find_element("css selector", "a.ProductCard-link")
+            product_link = link_element.get_attribute("href")
 
-        deals = []
-        products = driver.find_elements(By.CSS_SELECTOR, "div.ProductCard")
+            driver.get(product_link)
+            time.sleep(2)  # Allow product page to load
 
-        for product in products:
             try:
-                link_element = product.find_element(By.CSS_SELECTOR, "a.ProductCard-link")
-                product_url = link_element.get_attribute("href")
-                product_name = product.find_element(By.CSS_SELECTOR, "span.ProductName-primary").text
-                price = product.find_element(By.CSS_SELECTOR, "span.ProductPrice").text
+                name = driver.find_element("css selector", "h1.ProductName-primary").text
+                price = driver.find_element("css selector", ".ProductPrice").text
+            except NoSuchElementException:
+                print(f"⚠️ Price or Name not found for {product_link}")
+                price = "Price not found"
+                name = "Nike Air Max 1"
 
-                # Navigate to product page to extract supplier SKU (which matches Nike's style ID)
-                driver.execute_script("window.open('');")
-                driver.switch_to.window(driver.window_handles[1])
-                driver.get(product_url)
-                time.sleep(2)
+            try:
+                supplier_sku = driver.find_element("css selector", "[data-test='supplier-sku']").text  # Ensure correct element
+            except NoSuchElementException:
+                print(f"⚠️ Supplier SKU not found for {product_link}")
+                supplier_sku = None
 
-                try:
-                    supplier_sku = driver.find_element(By.XPATH, "//div[contains(text(),'Supplier-sku #')]/following-sibling::div").text
-                except:
-                    supplier_sku = "N/A"
+            deals.append({
+                "name": name,
+                "price_final": price,
+                "link": product_link,
+                "style_id": supplier_sku  # Ensure this matches Nike's format
+            })
 
-                driver.close()
-                driver.switch_to.window(driver.window_handles[0])
+        except Exception as e:
+            print(f"⚠️ Error processing product: {product_link}, Message: {e}")
 
-                deals.append({
-                    "name": product_name,
-                    "price_final": price,
-                    "link": product_url,
-                    "supplier_sku": supplier_sku
-                })
-
-            except Exception as e:
-                print(f"⚠️ Error processing product: {product_url}, Message: {str(e)}")
-        
-        return deals
-
-    finally:
-        driver.quit()
+    driver.quit()
+    return deals
