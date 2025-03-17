@@ -25,19 +25,28 @@ def get_nike_deals():
 
         for card in product_cards:
             try:
-                # Extract Product Name
-                product_name = card.find_element(By.CLASS_NAME, "product-card__title").text
+                # Extract Product Name with a fallback
+                try:
+                    product_name = card.find_element(By.CLASS_NAME, "product-card__title").text
+                except:
+                    product_name = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__title']").text
 
                 # Extract Product URL
-                product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
+                try:
+                    product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
+                except:
+                    product_url = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__link-overlay']").get_attribute("href")
 
                 # Extract Style ID from URL
                 style_id = product_url.split("/")[-1]  # Get last part of URL (e.g., FZ5808-400)
 
                 # Extract Image URL
-                image_url = card.find_element(By.CLASS_NAME, "product-card__hero-image").get_attribute("src")
+                try:
+                    image_url = card.find_element(By.CLASS_NAME, "product-card__hero-image").get_attribute("src")
+                except:
+                    image_url = card.find_element(By.CSS_SELECTOR, "img.product-card__hero-image").get_attribute("src")
 
-                # Extract Prices
+                # Extract Prices with fallbacks
                 try:
                     sale_price = card.find_element(By.CSS_SELECTOR, "div[data-testid='product-price-reduced']").text
                 except:
@@ -56,7 +65,7 @@ def get_nike_deals():
                     "image_url": image_url,
                     "sale_price": sale_price,
                     "original_price": original_price,
-                    "style_id": style_id,  # Added style_id to fix KeyError
+                    "style_id": style_id,
                 })
 
             except Exception as e:
