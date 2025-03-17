@@ -1,17 +1,14 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from scrapers.utils.selenium_setup import get_chrome_driver
 import time
+from utils.selenium_setup import get_selenium_driver
 
 def get_nike_deals():
-    """Scrapes Nike Air Max 1 deals from Nike's website."""
-    driver = get_chrome_driver()
-    url = "https://www.nike.com/w?q=air+max+1"
+    driver = get_selenium_driver()
 
-    print(f"\n🔍 Accessing Nike deals...\n")
+    url = "https://www.nike.com/w?q=air+max+1"
     driver.get(url)
-    time.sleep(3)
+    time.sleep(5)  # Wait for the page to load
 
     deals = []
 
@@ -21,25 +18,23 @@ def get_nike_deals():
             try:
                 name = product.find_element(By.CSS_SELECTOR, "div.product-card__title").text
                 price = product.find_element(By.CSS_SELECTOR, "div.product-price").text
-                link = product.find_element(By.TAG_NAME, "a").get_attribute("href")
+                product_url = product.find_element(By.CSS_SELECTOR, "a.product-card__link-overlay").get_attribute("href")
 
-                try:
-                    style_id = product.find_element(By.CSS_SELECTOR, "div.product-card__style-color").text.split(" ")[-1]
-                except NoSuchElementException:
-                    style_id = "N/A"
+                style_id_element = product.find_element(By.CSS_SELECTOR, "div.product-card__style-color")
+                style_id = style_id_element.text.split(" ")[-1] if style_id_element else "Unknown"
 
                 deals.append({
                     "store": "Nike",
                     "name": name,
                     "price": price,
-                    "url": link,
+                    "url": product_url,
                     "style_id": style_id
                 })
-            except NoSuchElementException:
-                print("⚠️ Skipping a product due to missing elements")
-    
-    except TimeoutException:
-        print("❌ Nike page failed to load properly.")
+            except Exception as e:
+                print(f"⚠️ Skipping a product due to error: {e}")
+
+    except Exception as e:
+        print(f"❌ Error fetching Nike deals: {e}")
 
     driver.quit()
     return deals
