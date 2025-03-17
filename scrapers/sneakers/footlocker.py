@@ -46,8 +46,8 @@ def get_footlocker_deals():
                 # Extract Style ID from URL
                 style_id = extract_style_id(product_link)
 
-                # Check for promo codes
-                final_price, promo_code = apply_promo_code("Foot Locker", price)
+                # Ensure price is a string before applying promo code
+                final_price, promo_code = apply_promo_code("Foot Locker", str(price) if price else "0")
 
                 if style_id:
                     deals[style_id] = {
