@@ -14,7 +14,7 @@ def main():
     combined_deals = {}
 
     # Merge Foot Locker deals with Nike deals based on style_id
-    for style_id, nike_product in nike_deals.items():
+    for nike_product in nike_deals:
         if style_id in footlocker_deals:
             # Combine Nike & Foot Locker prices
             nike_product["prices"].extend(footlocker_deals[style_id]["prices"])
