@@ -12,7 +12,7 @@ def get_nike_deals():
     response = requests.get(NIKE_SEARCH_URL)
 
     if response.status_code != 200:
-        print(f"❌ Nike request failed! Status Code: {response.status_code}")
+        print("❌ Nike request failed! Status Code: {response.status_code}")
         return {}
 
     try:
