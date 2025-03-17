@@ -1,72 +1,63 @@
 import time
-import re
+from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from utils.selenium_setup import get_driver
-from utils.promo_codes import apply_promo_code
-
-def extract_style_id(url):
-    """Extracts the style ID from a Nike product URL"""
-    match = re.search(r'/([A-Z0-9]{6}-[A-Z0-9]{3,4})$', url)
-    return match.group(1) if match else None
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 def get_nike_deals():
-    search_query = "air max 1"
-    url = f"https://www.nike.com/w?q={search_query.replace(' ', '+')}"
-    driver = get_driver()
+    """
+    Scrapes Nike Air Max 1 deals from Nike's website and returns them in a structured format.
+
+    Returns:
+        list: A list of dictionaries containing product name, price, link, and style_id.
+    """
+
+    print("\n🔍 Accessing Nike deals...\n")
+
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+    base_url = "https://www.nike.com/w?q=air+max+1"
+    driver.get(base_url)
+    time.sleep(5)  # Allow page to load
+
+    nike_deals = []
 
     try:
-        print(f"🔍 Accessing {url}")
-        driver.get(url)
-        time.sleep(5)
-
-        wait = WebDriverWait(driver, 10)
-
-        product_cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.product-card")))
-
-        deals = {}
-
-        for card in product_cards:
+        products = driver.find_elements(By.CSS_SELECTOR, "div.product-card")
+        for product in products:
             try:
-                title_element = card.find_element(By.CSS_SELECTOR, "div.product-card__title")
-                product_name = title_element.text.strip()
+                name_element = product.find_element(By.CSS_SELECTOR, "div.product-card__title")
+                price_element = product.find_element(By.CSS_SELECTOR, "div.product-price")
+                link_element = product.find_element(By.CSS_SELECTOR, "a.product-card__link-overlay")
+                style_id_element = product.find_element(By.CSS_SELECTOR, "div.product-card__style-color")
 
-                price_element = card.find_element(By.CSS_SELECTOR, "div.product-price")
-                price_text = price_element.text.strip().replace("$", "").replace(",", "")
-                price = float(price_text) if price_text else None
+                name = name_element.text.strip()
+                price_final = price_element.text.strip()
+                link = link_element.get_attribute("href")
+                style_id = style_id_element.text.strip().split(" ")[-1]  # Extract last part (actual style ID)
 
-                link_element = card.find_element(By.TAG_NAME, "a")
-                product_link = link_element.get_attribute("href")
+                nike_deals.append({
+                    "name": name,
+                    "price_final": price_final,
+                    "link": link,
+                    "style_id": style_id
+                })
 
-                style_id = extract_style_id(product_link)
-
-                # Convert price to string before applying promo code
-                final_price, promo_code = apply_promo_code("Nike", str(price) if price else "0")
-
-                if style_id:
-                    deals[style_id] = {
-                        "store": "Nike",
-                        "name": product_name,
-                        "price": price,
-                        "final_price": final_price,
-                        "promo_code": promo_code,
-                        "link": product_link
-                    }
-                else:
-                    print(f"⚠️ No style ID found for {product_name}")
+                print(f"✅ Found Nike Air Max 1: {name} - {price_final} - {style_id}")
 
             except Exception as e:
-                print(f"❌ Error processing a Nike product: {e}")
-
-        driver.quit()
-        return deals
+                print(f"⚠️ Skipping a product due to error: {e}")
 
     except Exception as e:
         print(f"❌ Error scraping Nike: {e}")
-        driver.quit()
-        return {}
 
-if __name__ == "__main__":
-    deals = get_nike_deals()
-    print(deals)
+    driver.quit()
+
+    print(f"\n🎯 Total Nike Air Max 1 deals found: {len(nike_deals)}\n")
+    return nike_deals
+
