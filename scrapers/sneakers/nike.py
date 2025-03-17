@@ -1,39 +1,36 @@
-import time
-import json
 import requests
 from bs4 import BeautifulSoup
 from utils.selenium_setup import get_selenium_driver
 
 NIKE_SEARCH_URL = "https://www.nike.com/w?q={query}&vst={query}"
 
-def scrape_nike(query):
-    print(f"🔍 Searching Nike for {query}...")
-
+def scrape_nike(sneaker_name):
+    search_url = NIKE_SEARCH_URL.format(query=sneaker_name.replace(" ", "%20"))
     driver = get_selenium_driver()
-    search_url = NIKE_SEARCH_URL.format(query=query.replace(" ", "%20"))
     driver.get(search_url)
-    time.sleep(5)
-
+    
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
-
-    results = {}
+    products = []
 
     for product in soup.find_all("div", class_="product-card"):
         try:
             name = product.find("div", class_="product-card__title").text.strip()
-            price = product.find("div", class_="product-price").text.strip()
+            price = float(product.find("div", class_="product-price").text.replace("$", "").strip())
             link = "https://www.nike.com" + product.find("a")["href"]
             image = product.find("img")["src"] if product.find("img") else ""
 
-            results[name] = {
+            # Extract Style ID from URL
+            style_id = link.split("/")[-1] if "/" in link else "Unknown"
+
+            products.append({
                 "name": name,
-                "image": image,
-                "price": float(price.replace("$", "").replace(",", "")),
+                "price": price,
                 "link": link,
-                "promo": None
-            }
+                "image": image,
+                "style_id": style_id
+            })
         except:
             continue
 
-    return results
+    driver.quit()
+    return products
