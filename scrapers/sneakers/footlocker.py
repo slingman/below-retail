@@ -1,7 +1,14 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from time import sleep
-from scrapers.utils import get_driver  # Ensure this is correctly imported
+
+# Try importing get_driver normally, but provide a fallback if there's an issue
+try:
+    from scrapers.utils import get_driver  # Normal import if running within package
+except ModuleNotFoundError:
+    import sys
+    sys.path.append("..")  # Ensure the script can find utils.py
+    from utils import get_driver  # Fallback import
 
 def get_footlocker_deals():
     driver = get_driver()
