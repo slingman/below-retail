@@ -25,11 +25,18 @@ def get_footlocker_deals():
 
         for card in product_cards:
             try:
-                # Extract Product Name
+                # Extract Product Name (try multiple possible class names)
                 try:
                     product_name = card.find_element(By.CLASS_NAME, "ProductCard-title").text
                 except:
-                    product_name = card.find_element(By.CLASS_NAME, "ProductName-primary").text  
+                    product_name = card.find_element(By.CLASS_NAME, "ProductName-primary").text  # Fallback
+                
+                if not product_name:
+                    product_name = "Unknown Product"  # Ensure a name is always present
+
+                # Filter only "Nike Air Max 1"
+                if "Air Max 1" not in product_name:
+                    continue  # Skip unrelated products
 
                 # Extract Product URL
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
@@ -38,47 +45,41 @@ def get_footlocker_deals():
                 try:
                     image_url = card.find_element(By.CLASS_NAME, "ProductCard-image--primary").get_attribute("src")
                 except:
-                    image_url = None  
+                    image_url = None  # Allow for cases where no image is found
 
                 # Extract Prices
                 try:
                     sale_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__sale").text
-                    sale_price = float(sale_price.replace("$", ""))  
                 except:
                     sale_price = None
 
                 try:
                     original_price = card.find_element(By.CLASS_NAME, "ProductCard-pricing__regular").text
-                    original_price = float(original_price.replace("$", ""))  
                 except:
-                    original_price = sale_price  
+                    original_price = sale_price  # If no original price, assume no discount
 
                 # Ensure at least one valid price is present
                 if not sale_price and not original_price:
-                    continue  
+                    continue  # Skip products with no price
 
-                # Extract Product ID (this is **not** the Nike style ID)
-                product_id = product_url.split("/")[-1].split(".")[0]  
-
-                # Extract Style ID from product page (Matching Nike's style ID)
-                driver.get(product_url)
-                time.sleep(2)  
+                # Extract Style ID (from product page URL)
                 try:
-                    style_id = driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #')]/following-sibling::span").text.strip()
+                    style_id = product_url.split("/")[-1].split(".")[0]  # Extract last part of URL before ".html"
                 except:
-                    style_id = None  
+                    style_id = None
 
                 # Store deal information
                 deals.append({
                     "store": "Foot Locker",
-                    "name": product_name,  
-                    "url": product_url,    
-                    "image": image_url,    
-                    "price": sale_price if sale_price else original_price,  
+                    "product_name": product_name,  
+                    "product_url": product_url,    
+                    "image_url": image_url,    
+                    "sale_price": sale_price if sale_price else original_price,  
                     "original_price": original_price,
-                    "product_id": product_id,  
-                    "style_id": style_id  
+                    "style_id": style_id,  
                 })
+
+                print(f"✅ Found: {product_name} ({style_id}) - {sale_price or original_price}")
 
             except Exception as e:
                 print(f"⚠️ Skipping a product due to error: {e}")
