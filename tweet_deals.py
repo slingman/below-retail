@@ -24,8 +24,11 @@ with open("deals.json", "r") as file:
 
 # Compare deals and tweet the best price
 for style_id, product in deals.items():
-    prices = product["prices"]
-    
+    prices = product.get("prices", [])
+    if not prices:
+        print(f"⚠️ Warning: No prices found for {product.get('name', 'Unknown Product')}, skipping.")
+        continue
+ 
     if len(prices) < 2:
         print(f"⚠️ Only one store found for {product['name']} ({style_id}), skipping comparison.")
         continue
