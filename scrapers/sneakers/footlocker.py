@@ -1,76 +1,47 @@
-import time
-import re
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from utils.selenium_setup import get_driver
-from utils.promo_codes import apply_promo_code
-
-def extract_style_id(url):
-    """Extracts the style ID from a Foot Locker product URL"""
-    match = re.search(r'product/.*?/([A-Z0-9]+)\.html$', url)
-    return match.group(1) if match else None
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 
 def get_footlocker_deals():
-    url = "https://www.footlocker.com/en/category/shoes.html"
     driver = get_driver()
+    search_url = "https://www.footlocker.com/search?query=air%20max%201"  # Corrected URL
+    driver.get(search_url)
 
+    deals = []
     try:
-        print(f"🔍 Accessing {url}")
-        driver.get(url)
-        time.sleep(5)
+        # Wait until products are visible
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".ProductCard"))
+        )
+        products = driver.find_elements(By.CSS_SELECTOR, ".ProductCard")
 
-        wait = WebDriverWait(driver, 10)
-        product_cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".ProductCard")))
-
-        deals = {}
-
-        for card in product_cards:
-            try:
-                title_element = card.find_element(By.CSS_SELECTOR, ".ProductName-primary")
-                product_name = title_element.text.strip()
-
+        for product in products:
+            retry_attempts = 3  # Retry mechanism for stale elements
+            while retry_attempts > 0:
                 try:
-                    price_element = card.find_element(By.CSS_SELECTOR, ".ProductPrice")
-                    price_text = price_element.text.strip().replace("$", "").replace(",", "")
-                    price = float(price_text) if price_text else None
-                except:
-                    price = None
+                    name_element = product.find_element(By.CSS_SELECTOR, "a.ProductCard-link")
+                    price_element = product.find_element(By.CSS_SELECTOR, "div.ProductCard-price")
 
-                try:
-                    link_element = card.find_element(By.CSS_SELECTOR, "a")
-                    product_link = link_element.get_attribute("href")
-                except:
-                    product_link = None
+                    name = name_element.text.strip()
+                    price_text = price_element.text.replace("$", "").strip()
+                    price = float(price_text) if price_text else None  # Handle missing prices
 
-                style_id = extract_style_id(product_link)
-
-                # Convert price to string before applying promo code
-                final_price, promo_code = apply_promo_code("Foot Locker", str(price) if price else "0")
-
-                if style_id:
-                    deals[style_id] = {
+                    link = name_element.get_attribute("href")
+                    
+                    deals.append({
                         "store": "Foot Locker",
-                        "name": product_name,
+                        "name": name,
                         "price": price,
-                        "final_price": final_price,
-                        "promo_code": promo_code,
-                        "link": product_link
-                    }
-                else:
-                    print(f"⚠️ No style ID found for {product_name}")
+                        "link": f"https://www.footlocker.com{link}"  # Ensure full URL
+                    })
+                    break  # Break out of retry loop on success
+                except StaleElementReferenceException:
+                    retry_attempts -= 1
+                    print("🔄 Retrying stale element...")
 
-            except Exception as e:
-                print(f"❌ Error processing a Foot Locker product: {e}")
-
-        driver.quit()
-        return deals
-
-    except Exception as e:
-        print(f"❌ Error scraping Foot Locker: {e}")
-        driver.quit()
-        return {}
-
-if __name__ == "__main__":
-    deals = get_footlocker_deals()
-    print(deals)
+    except TimeoutException:
+        print("❌ Timeout: No products found on Foot Locker for 'Air Max 1'")
+    
+    driver.quit()
+    return deals
