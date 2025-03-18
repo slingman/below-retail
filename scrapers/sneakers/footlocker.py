@@ -25,64 +25,49 @@ def get_footlocker_deals():
         driver.get(search_url)
         time.sleep(5)  # Allow page to load
 
-        # **Get a fresh list of product cards**
+        # **Get a list of product cards**
         product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
-        num_products = len(product_cards)
-
-        if num_products == 0:
+        if not product_cards:
             print("⚠️ No products found on Foot Locker.")
             return footlocker_deals  # Return empty if no products are found
 
-        # **Loop through available products (up to 3)**
-        for i in range(min(3, num_products)):  
-            try:
-                # **Re-fetch product cards to avoid stale elements**
-                product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
-                if i >= len(product_cards):  # Ensure index is in range
-                    print(f"⚠️ Skipping index {i}, not enough products available.")
-                    continue
+        # **Extract the first product URL**
+        product_url = product_cards[0].find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
+        print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
-                card = product_cards[i]
-                
-                # Extract Product URL
-                product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
-                print(f"✅ Extracted Foot Locker Product URL: {product_url}")
+        # Visit the product page
+        driver.get(product_url)
+        time.sleep(5)  # Ensure full page load
 
-                # Visit the product page
-                driver.get(product_url)
-                time.sleep(5)  # Ensure full page load
+        # **Click 'Details' section to reveal Supplier SKU**
+        try:
+            details_tab = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+            )
+            driver.execute_script("arguments[0].click();", details_tab)
+            print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
+            time.sleep(3)  # Allow content to expand
+        except:
+            print("⚠️ 'Details' section not found or could not be clicked.")
 
-                # **Click 'Details' section to reveal Supplier SKU**
-                try:
-                    details_tab = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                    )
-                    driver.execute_script("arguments[0].click();", details_tab)
-                    print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
-                    time.sleep(3)  # Allow content to expand
-                except:
-                    print("⚠️ 'Details' section not found or could not be clicked.")
+        # **Extract All Available Styles from Page Source**
+        supplier_skus = []
+        page_source = driver.page_source
+        matches = re.findall(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
 
-                # **Extract Supplier SKU from Page Source**
-                supplier_sku = None
-                page_source = driver.page_source
-                match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
-                if match:
-                    supplier_sku = match.group(1).strip()
-                    print(f"✅ Extracted Foot Locker Supplier SKU: {supplier_sku}")
-                else:
-                    print("❌ Supplier SKU not found.")
+        if matches:
+            supplier_skus = list(set(matches))  # Remove duplicates
+            print(f"✅ Extracted Foot Locker Supplier SKUs: {supplier_skus}")
+        else:
+            print("❌ Supplier SKUs not found.")
 
-                # **Store the deal data**
-                if supplier_sku:
-                    footlocker_deals.append({
-                        "store": "Foot Locker",
-                        "product_url": product_url,
-                        "supplier_sku": supplier_sku
-                    })
-
-            except Exception as e:
-                print(f"⚠️ Skipping a product due to error: {e}")
+        # **Store the extracted SKUs**
+        for sku in supplier_skus:
+            footlocker_deals.append({
+                "store": "Foot Locker",
+                "product_url": product_url,
+                "supplier_sku": sku
+            })
 
     finally:
         driver.quit()
