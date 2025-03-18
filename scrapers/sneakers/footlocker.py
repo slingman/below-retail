@@ -3,6 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
@@ -17,7 +18,7 @@ def get_footlocker_deals():
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,1080")  # Ensure elements are visible
+    options.add_argument("--window-size=1920,1080")  # Ensure full visibility
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
@@ -48,13 +49,17 @@ def get_footlocker_deals():
                 driver.get(corrected_product_url)
                 time.sleep(5)  # Ensure full page load
 
-                # **Ensure "Details" section is visible**
+                # **Ensure "Details" section is visible and click it**
                 try:
                     details_tab = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                        EC.element_to_be_clickable((By.ID, "ProductDetails-tabs-details-tab-0"))
                     )
-                    driver.execute_script("arguments[0].scrollIntoView();", details_tab)  # Scroll to make clickable
-                    driver.execute_script("arguments[0].click();", details_tab)  # Force click using JavaScript
+
+                    # Scroll into view
+                    driver.execute_script("arguments[0].scrollIntoView();", details_tab)
+
+                    # Click the "Details" button to expand the section
+                    details_tab.click()
                     print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
                     time.sleep(3)  # Allow content to expand
                 except Exception as e:
