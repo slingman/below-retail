@@ -46,43 +46,26 @@ def get_footlocker_deals():
                 driver.get(corrected_product_url)
                 time.sleep(5)  # Ensure full page load
 
-                # **Try Clicking the "Details" Section to Reveal SKU**
-                try:
-                    details_button = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Details')]"))
-                    )
-                    details_button.click()
-                    time.sleep(2)  # Allow details section to expand
-                    print("✅ Clicked 'Details' section to reveal SKU.")
-                except Exception:
-                    print("⚠️ 'Details' section not found or could not be clicked.")
-
-                # **Extract Supplier SKU from Page Elements**
+                # **Extract Supplier SKU from Page**
                 supplier_sku = None
                 try:
                     supplier_sku_element = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier Sku')]/following-sibling::span"))
+                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::text()"))
                     )
                     supplier_sku = supplier_sku_element.text.strip()
-                    print(f"✅ Extracted Foot Locker Supplier SKU from elements: {supplier_sku}")
+                    print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
                 except:
                     print("⚠️ Supplier SKU not found in page elements. Checking page source...")
 
                 # **Fallback: Extract Supplier SKU from Page Source (if missing)**
                 if not supplier_sku:
                     page_source = driver.page_source
-                    match = re.search(r'"supplierSku"\s*:\s*"([\w\d-]+)"', page_source)
+                    match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
                     if match:
                         supplier_sku = match.group(1).strip()
                         print(f"✅ Extracted Foot Locker Supplier SKU from Page Source: {supplier_sku}")
                     else:
-                        print("⚠️ Supplier SKU not found in Page Source.")
-
-                # **Final Output**
-                if supplier_sku:
-                    print(f"✅ Final Extracted Foot Locker Supplier SKU #: {supplier_sku}")
-                else:
-                    print("❌ Supplier SKU still not found.")
+                        print("❌ Supplier SKU still not found.")
 
                 return  # Stop after first product for debugging
 
