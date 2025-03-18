@@ -46,25 +46,27 @@ def get_footlocker_deals():
                 driver.get(corrected_product_url)
                 time.sleep(5)  # Ensure full page load
 
+                # **Try Clicking the "Details" Section to Reveal SKU**
+                try:
+                    details_button = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Details')]"))
+                    )
+                    details_button.click()
+                    time.sleep(2)  # Allow details section to expand
+                    print("✅ Clicked 'Details' section to reveal SKU.")
+                except Exception:
+                    print("⚠️ 'Details' section not found or could not be clicked.")
+
                 # **Extract Supplier SKU from Page Elements**
                 supplier_sku = None
-                potential_sku_xpaths = [
-                    "//span[contains(text(), 'Supplier Sku')]/following-sibling::span",
-                    "//p[contains(text(), 'Supplier Sku')]/following-sibling::p",
-                    "//li[contains(text(), 'Supplier Sku')]/following-sibling::li"
-                ]
-
-                for xpath in potential_sku_xpaths:
-                    try:
-                        supplier_sku_element = WebDriverWait(driver, 5).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))
-                        )
-                        supplier_sku = supplier_sku_element.text.strip()
-                        if supplier_sku:
-                            print(f"✅ Extracted Foot Locker Supplier SKU from elements: {supplier_sku}")
-                            break  # Exit loop once found
-                    except:
-                        continue  # Try the next XPath if one fails
+                try:
+                    supplier_sku_element = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier Sku')]/following-sibling::span"))
+                    )
+                    supplier_sku = supplier_sku_element.text.strip()
+                    print(f"✅ Extracted Foot Locker Supplier SKU from elements: {supplier_sku}")
+                except:
+                    print("⚠️ Supplier SKU not found in page elements. Checking page source...")
 
                 # **Fallback: Extract Supplier SKU from Page Source (if missing)**
                 if not supplier_sku:
@@ -78,9 +80,9 @@ def get_footlocker_deals():
 
                 # **Final Output**
                 if supplier_sku:
-                    print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
+                    print(f"✅ Final Extracted Foot Locker Supplier SKU #: {supplier_sku}")
                 else:
-                    print("⚠️ Supplier SKU not found.")
+                    print("❌ Supplier SKU still not found.")
 
                 return  # Stop after first product for debugging
 
