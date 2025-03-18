@@ -31,25 +31,31 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
-                # Visit product page to extract SKU
+                # Visit product page to extract identifiers
                 driver.get(product_url)
-                time.sleep(8)  # Ensure full page load
+                time.sleep(5)  # Ensure full page load
 
-                # Extract SKU
-                try:
-                    sku_element = WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:') or contains(text(), 'SKU')]"))
-                    )
-                    supplier_sku = sku_element.text.split(":")[-1].strip()
-                    print(f"✅ Extracted Foot Locker Supplier-sku #: {supplier_sku}")
+                page_source = driver.page_source
 
-                    # Construct the correct product URL with SKU
-                    correct_product_url = f"https://www.footlocker.com/product/~/{supplier_sku}.html"
+                # Extract Product # (used in URL)
+                product_match = re.search(r"\"productId\":\"(\w+)\"", page_source)
+                product_number = product_match.group(1) if product_match else None
+
+                # Extract Supplier SKU # (Nike’s Style ID equivalent)
+                sku_match = re.search(r"\"sku\":\"([^\"]+)\"", page_source)
+                supplier_sku = sku_match.group(1).strip() if sku_match else None
+
+                if product_number:
+                    correct_product_url = f"https://www.footlocker.com/product/~/ {product_number}.html"
+                    correct_product_url = correct_product_url.replace("~/", "").strip()
                     print(f"✅ Corrected Foot Locker Product URL: {correct_product_url}")
-                
-                except Exception as e:
-                    print(f"⚠️ SKU element not found on the page. Error: {e}")
-                    supplier_sku = None
+                else:
+                    print("⚠️ Could not extract Foot Locker Product # for URL.")
+
+                if supplier_sku:
+                    print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
+                else:
+                    print("⚠️ Could not extract Supplier SKU #.")
 
                 return  # Stop after first product for debugging
 
