@@ -25,7 +25,7 @@ def get_footlocker_deals():
 
         for card in product_cards:
             try:
-                # Extract Product URL from the search results
+                # Extract Product URL from search results
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
@@ -35,13 +35,13 @@ def get_footlocker_deals():
 
                 page_source = driver.page_source
 
-                # Extract Foot Locker Product # (this is what they use in the URL)
+                # Extract Foot Locker Product #
                 product_match = re.search(r'"productId"\s*:\s*"([^"]+)"', page_source)
                 product_number = product_match.group(1) if product_match else None
 
-                # Extract Supplier SKU # (Foot Locker’s own SKU, not the Product #)
-                sku_match = re.search(r'"sku"\s*:\s*"([^"]+)"', page_source)
-                supplier_sku = sku_match.group(1).strip() if sku_match else None
+                # Extract Supplier SKU (corrected)
+                supplier_sku_match = re.search(r'"supplierSku"\s*:\s*"([^"]+)"', page_source)  # Correct field
+                supplier_sku = supplier_sku_match.group(1) if supplier_sku_match else None
 
                 # Construct Correct Foot Locker URL
                 if product_number:
@@ -53,7 +53,7 @@ def get_footlocker_deals():
                 if supplier_sku:
                     print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
                 else:
-                    print("⚠️ Could not extract Supplier SKU #.")
+                    print("⚠️ Could not extract Supplier SKU.")
 
                 return  # Stop after first product for debugging
 
