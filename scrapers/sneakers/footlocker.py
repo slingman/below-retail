@@ -45,21 +45,33 @@ def get_footlocker_deals():
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
             )
             driver.execute_script("arguments[0].click();", details_tab)
-            print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
+            print("✅ Clicked on 'Details' section to reveal Supplier SKUs.")
             time.sleep(3)  # Allow content to expand
         except:
             print("⚠️ 'Details' section not found or could not be clicked.")
 
-        # **Extract All Available Styles from Page Source**
+        # **Extract All Available Styles from the HTML elements**
         supplier_skus = []
-        page_source = driver.page_source
-        matches = re.findall(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
+        try:
+            sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
+            for elem in sku_elements:
+                sku = elem.text.strip()
+                if sku:
+                    supplier_skus.append(sku)
 
-        if matches:
-            supplier_skus = list(set(matches))  # Remove duplicates
-            print(f"✅ Extracted Foot Locker Supplier SKUs: {supplier_skus}")
-        else:
-            print("❌ Supplier SKUs not found.")
+        except:
+            print("⚠️ Supplier SKUs not found in page elements. Checking page source...")
+
+        # **Fallback: Extract from Page Source**
+        if not supplier_skus:
+            page_source = driver.page_source
+            matches = re.findall(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
+
+            if matches:
+                supplier_skus = list(set(matches))  # Remove duplicates
+                print(f"✅ Extracted Foot Locker Supplier SKUs from Page Source: {supplier_skus}")
+            else:
+                print("❌ Supplier SKUs still not found.")
 
         # **Store the extracted SKUs**
         for sku in supplier_skus:
