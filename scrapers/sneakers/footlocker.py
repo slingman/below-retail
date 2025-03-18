@@ -1,6 +1,8 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
@@ -28,16 +30,24 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
-                # Visit product page to extract Supplier-sku #
+                # Visit product page
                 driver.get(product_url)
-                time.sleep(8)  # Ensure full page load
+                
+                # Wait for page load
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+                
+                # Re-fetch page source and extract Supplier-SKU
+                time.sleep(3)  # Small delay for stability
+                page_source = driver.page_source
 
-                # Extract Supplier-sku #
-                details_section = driver.find_element(By.XPATH, "//div[contains(text(), 'Supplier-sku #:')]")
-                supplier_sku = details_section.text.split("Supplier-sku #:")[-1].strip()
-                print(f"✅ Extracted Foot Locker Supplier-sku #: {supplier_sku}")
+                # Look for "Supplier-sku #"
+                if "Supplier-sku #:" in page_source:
+                    supplier_sku = page_source.split("Supplier-sku #:")[1].split("<")[0].strip()
+                    print(f"✅ Extracted Foot Locker Supplier-sku #: {supplier_sku}")
+                else:
+                    print("⚠️ Could not find Supplier-sku # on Foot Locker page.")
 
-                # Return after first product for debugging
+                # Stop after first product for debugging
                 return
 
             except Exception as e:
