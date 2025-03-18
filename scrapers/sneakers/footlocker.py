@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
+import json
 
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
@@ -19,7 +20,7 @@ def get_footlocker_deals():
 
     try:
         driver.get(search_url)
-        time.sleep(5)  # Allow time for page to load
+        time.sleep(5)  # Allow page to load
 
         product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
 
@@ -33,17 +34,26 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)  # Ensure full page load
 
+                # Grab full page source
                 page_source = driver.page_source
 
-                # Extract Foot Locker Product #
-                product_match = re.search(r'"productId"\s*:\s*"([^"]+)"', page_source)
-                product_number = product_match.group(1) if product_match else None
+                # **Extract Product Number from URL**
+                product_number_match = re.search(r'/product/[^/]+/([\w\d]+)\.html', product_url)
+                product_number = product_number_match.group(1) if product_number_match else None
 
-                # Extract Supplier SKU (corrected)
-                supplier_sku_match = re.search(r'"supplierSku"\s*:\s*"([^"]+)"', page_source)  # Correct field
-                supplier_sku = supplier_sku_match.group(1) if supplier_sku_match else None
+                # **Extract Supplier SKU from JSON Data**
+                json_match = re.search(r'window\.__PRELOADED_STATE__\s*=\s*({.*?});', page_source)
+                supplier_sku = None
 
-                # Construct Correct Foot Locker URL
+                if json_match:
+                    try:
+                        json_data = json.loads(json_match.group(1))
+                        product_info = json_data.get("ProductDetail", {}).get("product", {})
+                        supplier_sku = product_info.get("supplierSku", None)
+                    except json.JSONDecodeError:
+                        print("⚠️ Could not decode Foot Locker JSON data.")
+
+                # **Fix Foot Locker Product URL**
                 if product_number:
                     correct_product_url = f"https://www.footlocker.com/product/~/ {product_number}.html".replace("~/ ", "").strip()
                     print(f"✅ Corrected Foot Locker Product URL: {correct_product_url}")
