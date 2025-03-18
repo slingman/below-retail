@@ -29,6 +29,7 @@ def get_footlocker_deals():
             try:
                 # Extract Product URL from search results
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
+                print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
                 # Extract Foot Locker Product Number from URL
                 product_number_match = re.search(r'/product/[^/]+/([\w\d]+)\.html', product_url)
@@ -46,6 +47,17 @@ def get_footlocker_deals():
                 driver.get(corrected_product_url)
                 time.sleep(5)  # Ensure full page load
 
+                # **Ensure "Details" section is visible**
+                try:
+                    details_tab = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                    )
+                    driver.execute_script("arguments[0].click();", details_tab)
+                    print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
+                    time.sleep(3)  # Allow content to expand
+                except:
+                    print("⚠️ 'Details' section not found or could not be clicked.")
+
                 # **Extract Supplier SKU from Page**
                 supplier_sku = None
                 try:
@@ -57,7 +69,7 @@ def get_footlocker_deals():
                 except:
                     print("⚠️ Supplier SKU not found in page elements. Checking page source...")
 
-                # **Fallback: Extract Supplier SKU from Page Source (if missing)**
+                # **Fallback: Extract Supplier SKU from Page Source**
                 if not supplier_sku:
                     page_source = driver.page_source
                     match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
