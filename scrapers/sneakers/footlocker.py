@@ -35,17 +35,6 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)  # Ensure full page load
 
-                # Extract Foot Locker Product Number from URL
-                product_number_match = re.search(r'/product/[^/]+/([\w\d]+)\.html', product_url)
-                product_number = product_number_match.group(1) if product_number_match else None
-
-                # **Corrected Foot Locker Product URL**
-                if product_number:
-                    correct_product_url = f"https://www.footlocker.com/product/~/ {product_number}.html".replace(" ~/ ", "~/").strip()
-                    print(f"✅ Corrected Foot Locker Product URL: {correct_product_url}")
-                else:
-                    print("⚠️ Could not extract Foot Locker Product # for URL.")
-
                 # **Extract Supplier SKU from Page Elements**
                 supplier_sku = None
                 potential_sku_xpaths = [
