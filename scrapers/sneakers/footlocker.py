@@ -1,10 +1,11 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
-import json
 
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
@@ -34,36 +35,32 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)  # Ensure full page load
 
-                # Grab full page source
-                page_source = driver.page_source
-
-                # **Extract Product Number from URL**
+                # Extract Product Number from URL
                 product_number_match = re.search(r'/product/[^/]+/([\w\d]+)\.html', product_url)
                 product_number = product_number_match.group(1) if product_number_match else None
 
-                # **Extract Supplier SKU from JSON Data**
-                json_match = re.search(r'window\.__PRELOADED_STATE__\s*=\s*({.*?});', page_source)
-                supplier_sku = None
-
-                if json_match:
-                    try:
-                        json_data = json.loads(json_match.group(1))
-                        product_info = json_data.get("ProductDetail", {}).get("product", {})
-                        supplier_sku = product_info.get("supplierSku", None)
-                    except json.JSONDecodeError:
-                        print("⚠️ Could not decode Foot Locker JSON data.")
-
-                # **Fix Foot Locker Product URL**
+                # **Correct Foot Locker Product URL Format**
                 if product_number:
                     correct_product_url = f"https://www.footlocker.com/product/~/ {product_number}.html".replace("~/ ", "").strip()
                     print(f"✅ Corrected Foot Locker Product URL: {correct_product_url}")
                 else:
                     print("⚠️ Could not extract Foot Locker Product # for URL.")
 
+                # **Extract Supplier SKU from HTML**
+                supplier_sku = None
+                try:
+                    supplier_sku_element = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier Sku')]/following-sibling::span"))
+                    )
+                    supplier_sku = supplier_sku_element.text.strip()
+                except Exception:
+                    print("⚠️ Could not extract Supplier SKU from page elements.")
+
+                # **Final Output**
                 if supplier_sku:
                     print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
                 else:
-                    print("⚠️ Could not extract Supplier SKU.")
+                    print("⚠️ Supplier SKU not found.")
 
                 return  # Stop after first product for debugging
 
