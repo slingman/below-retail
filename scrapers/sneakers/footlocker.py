@@ -52,28 +52,27 @@ def get_footlocker_deals():
                     details_tab = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
                     )
-                    driver.execute_script("arguments[0].click();", details_tab)  # Force-click using JS
+                    driver.execute_script("arguments[0].click();", details_tab)
                     print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
                     time.sleep(3)  # Allow content to expand
-                except Exception as e:
-                    print(f"⚠️ 'Details' section not found or could not be clicked: {e}")
+                except:
+                    print("⚠️ 'Details' section not found or could not be clicked.")
 
                 # **Extract Supplier SKU from Page**
                 supplier_sku = None
                 try:
-                    # Wait for the Supplier SKU to appear
                     supplier_sku_element = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku')]/following-sibling::span"))
+                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::text()"))
                     )
                     supplier_sku = supplier_sku_element.text.strip()
                     print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
-                except Exception as e:
-                    print(f"⚠️ Supplier SKU not found in page elements: {e}. Checking page source...")
+                except:
+                    print("⚠️ Supplier SKU not found in page elements. Checking page source...")
 
                 # **Fallback: Extract Supplier SKU from Page Source**
                 if not supplier_sku:
                     page_source = driver.page_source
-                    match = re.search(r'Supplier-sku\s*#:\s*<!-- -->\s*([\w\d-]+)', page_source)
+                    match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
                     if match:
                         supplier_sku = match.group(1).strip()
                         print(f"✅ Extracted Foot Locker Supplier SKU from Page Source: {supplier_sku}")
