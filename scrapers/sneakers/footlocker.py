@@ -3,7 +3,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
@@ -33,39 +32,23 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
-                # Extract Foot Locker Product Number from URL
-                product_number_match = re.search(r'/product/[^/]+/([\w\d]+)\.html', product_url)
-                product_number = product_number_match.group(1) if product_number_match else None
-
-                # **Ensure Correct Foot Locker Product URL Format**
-                if product_number:
-                    corrected_product_url = f"https://www.footlocker.com/product/~/Z{product_number}.html"
-                    print(f"✅ Corrected Foot Locker Product URL: {corrected_product_url}")
-                else:
-                    corrected_product_url = product_url  # Fallback to original
-                    print(f"⚠️ Could not extract Foot Locker Product #, using original URL: {product_url}")
-
-                # Visit the product page
-                driver.get(corrected_product_url)
+                # ✅ **No need to modify the URL** since it auto-redirects correctly.
+                driver.get(product_url)
                 time.sleep(5)  # Ensure full page load
 
                 # **Ensure "Details" section is visible and click it**
                 try:
-                    details_tab = WebDriverWait(driver, 5).until(
+                    details_button = WebDriverWait(driver, 7).until(
                         EC.element_to_be_clickable((By.ID, "ProductDetails-tabs-details-tab-0"))
                     )
-
-                    # Scroll into view
-                    driver.execute_script("arguments[0].scrollIntoView();", details_tab)
-
-                    # Click the "Details" button to expand the section
-                    details_tab.click()
+                    driver.execute_script("arguments[0].scrollIntoView();", details_button)
+                    driver.execute_script("arguments[0].click();", details_button)
                     print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
                     time.sleep(3)  # Allow content to expand
                 except Exception as e:
                     print(f"⚠️ 'Details' section not found or could not be clicked: {e}")
 
-                # **Extract Supplier SKU from Page**
+                # **Wait for Supplier SKU to appear**
                 supplier_sku = None
                 try:
                     supplier_sku_element = WebDriverWait(driver, 5).until(
