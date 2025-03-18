@@ -21,54 +21,40 @@ def get_footlocker_deals():
 
     try:
         driver.get(search_url)
-        time.sleep(5)  # Allow page to load
+        time.sleep(5)  # Allow time for page to load
 
-        # Get first product card
         product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
-        if not product_cards:
-            print("⚠️ No products found on Foot Locker search page.")
-            return None
-        
-        first_product = product_cards[0]
 
-        # Extract Product URL
-        product_link_element = first_product.find_element(By.CLASS_NAME, "ProductCard-link")
-        raw_product_url = product_link_element.get_attribute("href")
+        for card in product_cards:
+            try:
+                # Extract Product URL
+                product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
+                print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
-        # Extract SKU from the product URL (if possible)
-        match = re.search(r"/product/.*?/([\w-]+)\.html", raw_product_url)
-        if match:
-            sku = match.group(1)
-            correct_product_url = f"https://www.footlocker.com/product/~/ {sku}.html"
-            print(f"✅ Extracted Foot Locker Product URL: {correct_product_url}")
-        else:
-            correct_product_url = raw_product_url
-            print(f"⚠️ Could not determine correct product URL format, using original: {raw_product_url}")
+                # Visit product page to extract SKU
+                driver.get(product_url)
+                time.sleep(8)  # Ensure full page load
 
-        # Visit product page
-        driver.get(correct_product_url)
+                # Extract SKU
+                try:
+                    sku_element = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:') or contains(text(), 'SKU')]"))
+                    )
+                    supplier_sku = sku_element.text.split(":")[-1].strip()
+                    print(f"✅ Extracted Foot Locker Supplier-sku #: {supplier_sku}")
 
-        # Wait for SKU element
-        try:
-            sku_element = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:') or contains(text(), 'SKU #:')]"))
-            )
-            supplier_sku = sku_element.text.split(":")[-1].strip()
-            print(f"✅ Extracted Foot Locker Supplier-sku #: {supplier_sku}")
-        except:
-            print("⚠️ SKU element not found on the page.")
-            supplier_sku = None
+                    # Construct the correct product URL with SKU
+                    correct_product_url = f"https://www.footlocker.com/product/~/{supplier_sku}.html"
+                    print(f"✅ Corrected Foot Locker Product URL: {correct_product_url}")
+                
+                except Exception as e:
+                    print(f"⚠️ SKU element not found on the page. Error: {e}")
+                    supplier_sku = None
 
-        # Return extracted product details
-        return {
-            "store": "Foot Locker",
-            "product_url": correct_product_url,
-            "supplier_sku": supplier_sku
-        }
+                return  # Stop after first product for debugging
 
-    except Exception as e:
-        print(f"⚠️ Error during Foot Locker scraping: {e}")
-        return None
+            except Exception as e:
+                print(f"⚠️ Skipping a product due to error: {e}")
 
     finally:
         driver.quit()
