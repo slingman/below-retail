@@ -10,14 +10,13 @@ import re
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
-    # Set up Selenium WebDriver
+    # ✅ Using last **stable** ChromeDriver setup
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode for efficiency
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,1080")  # Ensure full visibility
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
@@ -32,42 +31,42 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
-                # ✅ **No need to modify the URL** since it auto-redirects correctly.
+                # ✅ No need to modify the URL; Foot Locker redirects correctly
                 driver.get(product_url)
                 time.sleep(5)  # Ensure full page load
 
-                # **Ensure "Details" section is visible and click it**
+                # **Click on 'Details' section**
                 try:
-                    details_button = WebDriverWait(driver, 7).until(
+                    details_button = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.ID, "ProductDetails-tabs-details-tab-0"))
                     )
-                    driver.execute_script("arguments[0].scrollIntoView();", details_button)
                     driver.execute_script("arguments[0].click();", details_button)
                     print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
                     time.sleep(3)  # Allow content to expand
-                except Exception as e:
-                    print(f"⚠️ 'Details' section not found or could not be clicked: {e}")
+                except Exception:
+                    print("⚠️ 'Details' section not found or could not be clicked.")
 
-                # **Wait for Supplier SKU to appear**
-                supplier_sku = None
+                # **Extract Supplier SKUs**
+                supplier_skus = set()  # Store unique SKUs
                 try:
-                    supplier_sku_element = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku')]/following-sibling::span"))
-                    )
-                    supplier_sku = supplier_sku_element.text.strip()
-                    print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
-                except Exception as e:
-                    print(f"⚠️ Supplier SKU not found in page elements: {e}. Checking page source...")
+                    sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku')]/following-sibling::span")
+                    for sku_element in sku_elements:
+                        sku = sku_element.text.strip()
+                        supplier_skus.add(sku)
+                except Exception:
+                    print("⚠️ Supplier SKU not found in page elements. Checking page source...")
 
-                # **Fallback: Extract Supplier SKU from Page Source**
-                if not supplier_sku:
+                # **Fallback: Extract from Page Source**
+                if not supplier_skus:
                     page_source = driver.page_source
-                    match = re.search(r'Supplier-sku\s*#:\s*<!-- -->\s*([\w\d-]+)', page_source)
-                    if match:
-                        supplier_sku = match.group(1).strip()
-                        print(f"✅ Extracted Foot Locker Supplier SKU from Page Source: {supplier_sku}")
-                    else:
-                        print("❌ Supplier SKU still not found.")
+                    matches = re.findall(r'Supplier-sku\s*#:\s*<!-- -->\s*([\w\d-]+)', page_source)
+                    if matches:
+                        supplier_skus.update(matches)
+
+                if supplier_skus:
+                    print(f"✅ Extracted Foot Locker Supplier SKUs: {', '.join(supplier_skus)}")
+                else:
+                    print("❌ Supplier SKUs still not found.")
 
                 return  # Stop after first product for debugging
 
