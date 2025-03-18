@@ -56,6 +56,16 @@ def get_footlocker_deals():
                 except Exception:
                     print("⚠️ Could not extract Supplier SKU from page elements.")
 
+                # **Fallback: Extract Supplier SKU from Page Source (if missing)**
+                if not supplier_sku:
+                    page_source = driver.page_source
+                    match = re.search(r'"supplierSku"\s*:\s*"([\w\d-]+)"', page_source)
+                    if match:
+                        supplier_sku = match.group(1).strip()
+                        print(f"✅ Extracted Foot Locker Supplier SKU from Page Source: {supplier_sku}")
+                    else:
+                        print("⚠️ Supplier SKU not found in Page Source.")
+
                 # **Final Output**
                 if supplier_sku:
                     print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
