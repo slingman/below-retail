@@ -25,11 +25,16 @@ def get_footlocker_deals():
         driver.get(search_url)
         time.sleep(5)  # Allow page to load
 
+        # **Locate product elements fresh in each loop**
         product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
 
-        for i, card in enumerate(product_cards[:3]):  # Limit to 3 styles for now
+        for i in range(min(3, len(product_cards))):  # Limit to 3 styles for now
             try:
-                # Extract Product URL from search results
+                # **Re-fetch product elements to avoid stale references**
+                product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
+                card = product_cards[i]
+
+                # Extract Product URL
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL: {product_url}")
 
