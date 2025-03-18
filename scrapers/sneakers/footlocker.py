@@ -35,11 +35,11 @@ def get_footlocker_deals():
 
                 page_source = driver.page_source
 
-                # Extract Foot Locker Product #
+                # Extract Foot Locker Product # (this is what they use in the URL)
                 product_match = re.search(r'"productId"\s*:\s*"([^"]+)"', page_source)
                 product_number = product_match.group(1) if product_match else None
 
-                # Extract Supplier SKU # (should match Nike Style ID)
+                # Extract Supplier SKU # (Foot Locker’s own SKU, not the Product #)
                 sku_match = re.search(r'"sku"\s*:\s*"([^"]+)"', page_source)
                 supplier_sku = sku_match.group(1).strip() if sku_match else None
 
