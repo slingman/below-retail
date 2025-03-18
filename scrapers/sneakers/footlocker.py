@@ -35,26 +35,36 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)  # Ensure full page load
 
-                # Extract Product Number from URL
+                # Extract Foot Locker Product Number from URL
                 product_number_match = re.search(r'/product/[^/]+/([\w\d]+)\.html', product_url)
                 product_number = product_number_match.group(1) if product_number_match else None
 
-                # **Correct Foot Locker Product URL Format**
+                # **Corrected Foot Locker Product URL**
                 if product_number:
-                    correct_product_url = f"https://www.footlocker.com/product/~/ {product_number}.html".replace("~/ ", "").strip()
+                    correct_product_url = f"https://www.footlocker.com/product/~/ {product_number}.html".replace(" ~/ ", "~/").strip()
                     print(f"✅ Corrected Foot Locker Product URL: {correct_product_url}")
                 else:
                     print("⚠️ Could not extract Foot Locker Product # for URL.")
 
-                # **Extract Supplier SKU from HTML**
+                # **Extract Supplier SKU from Page Elements**
                 supplier_sku = None
-                try:
-                    supplier_sku_element = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier Sku')]/following-sibling::span"))
-                    )
-                    supplier_sku = supplier_sku_element.text.strip()
-                except Exception:
-                    print("⚠️ Could not extract Supplier SKU from page elements.")
+                potential_sku_xpaths = [
+                    "//span[contains(text(), 'Supplier Sku')]/following-sibling::span",
+                    "//p[contains(text(), 'Supplier Sku')]/following-sibling::p",
+                    "//li[contains(text(), 'Supplier Sku')]/following-sibling::li"
+                ]
+
+                for xpath in potential_sku_xpaths:
+                    try:
+                        supplier_sku_element = WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.XPATH, xpath))
+                        )
+                        supplier_sku = supplier_sku_element.text.strip()
+                        if supplier_sku:
+                            print(f"✅ Extracted Foot Locker Supplier SKU from elements: {supplier_sku}")
+                            break  # Exit loop once found
+                    except:
+                        continue  # Try the next XPath if one fails
 
                 # **Fallback: Extract Supplier SKU from Page Source (if missing)**
                 if not supplier_sku:
