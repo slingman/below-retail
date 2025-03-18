@@ -37,7 +37,7 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)  # Ensure full page load
 
-                # **Ensure "Details" section is visible**
+                # **Click 'Details' section to reveal Supplier SKU**
                 try:
                     details_tab = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
@@ -48,26 +48,15 @@ def get_footlocker_deals():
                 except:
                     print("⚠️ 'Details' section not found or could not be clicked.")
 
-                # **Extract Supplier SKU from Page**
+                # **Extract Supplier SKU from Page Source**
                 supplier_sku = None
-                try:
-                    supplier_sku_element = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::text()"))
-                    )
-                    supplier_sku = supplier_sku_element.text.strip()
+                page_source = driver.page_source
+                match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
+                if match:
+                    supplier_sku = match.group(1).strip()
                     print(f"✅ Extracted Foot Locker Supplier SKU: {supplier_sku}")
-                except:
-                    print("⚠️ Supplier SKU not found in page elements. Checking page source...")
-
-                # **Fallback: Extract Supplier SKU from Page Source**
-                if not supplier_sku:
-                    page_source = driver.page_source
-                    match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
-                    if match:
-                        supplier_sku = match.group(1).strip()
-                        print(f"✅ Extracted Foot Locker Supplier SKU from Page Source: {supplier_sku}")
-                    else:
-                        print("❌ Supplier SKU still not found.")
+                else:
+                    print("❌ Supplier SKU not found.")
 
                 # **Store the deal data**
                 if supplier_sku:
