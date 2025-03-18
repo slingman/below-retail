@@ -6,7 +6,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
-import json
 
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
@@ -22,7 +21,7 @@ def get_footlocker_deals():
 
     try:
         driver.get(search_url)
-        time.sleep(5)  # Allow time for page load
+        time.sleep(5)  # Allow page to load
 
         product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
 
@@ -47,38 +46,21 @@ def get_footlocker_deals():
                 else:
                     print("⚠️ Could not extract Foot Locker Product # for URL.")
 
-                # **Approach 1: Extract Supplier SKU from JavaScript Object**
+                # **Extract Supplier SKU from HTML**
+                supplier_sku = None
                 try:
-                    script = "return window.__PRELOADED_STATE__ ? JSON.stringify(window.__PRELOADED_STATE__) : '';"
-                    json_data = driver.execute_script(script)
-                    if json_data:
-                        data = json.loads(json_data)
-                        supplier_sku = data.get("ProductDetails", {}).get("currentProduct", {}).get("sku")
-                        if supplier_sku:
-                            print(f"✅ Extracted Foot Locker Supplier SKU from JavaScript: {supplier_sku}")
-                        else:
-                            print("⚠️ Supplier SKU not found in JavaScript.")
-                    else:
-                        print("⚠️ No JavaScript data found.")
-                except Exception as e:
-                    print(f"⚠️ JavaScript extraction error: {e}")
-                    supplier_sku = None
-
-                # **Approach 2: Search for Supplier SKU in Page Source (Fallback)**
-                if not supplier_sku:
-                    page_source = driver.page_source
-                    match = re.search(r'"supplierSku"\s*:\s*"([\w\d-]+)"', page_source)
-                    if match:
-                        supplier_sku = match.group(1).strip()
-                        print(f"✅ Extracted Foot Locker Supplier SKU from Page Source: {supplier_sku}")
-                    else:
-                        print("⚠️ Supplier SKU not found in Page Source.")
+                    supplier_sku_element = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier Sku')]/following-sibling::span"))
+                    )
+                    supplier_sku = supplier_sku_element.text.strip()
+                except Exception:
+                    print("⚠️ Could not extract Supplier SKU from page elements.")
 
                 # **Final Output**
                 if supplier_sku:
-                    print(f"✅ Final Supplier SKU: {supplier_sku}")
+                    print(f"✅ Extracted Foot Locker Supplier SKU #: {supplier_sku}")
                 else:
-                    print("⚠️ Supplier SKU extraction failed.")
+                    print("⚠️ Supplier SKU not found.")
 
                 return  # Stop after first product for debugging
 
