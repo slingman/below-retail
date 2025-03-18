@@ -45,23 +45,23 @@ def get_footlocker_deals():
 
                 # Visit the product page
                 driver.get(corrected_product_url)
-                time.sleep(5)  # Allow full page load
+                time.sleep(5)  # Ensure full page load
 
-                # **Ensure "Details" section is expanded**
+                # **Ensure "Details" section is visible**
                 try:
                     details_tab = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
                     )
-                    driver.execute_script("arguments[0].scrollIntoView();", details_tab)  # Scroll into view
                     driver.execute_script("arguments[0].click();", details_tab)  # Force-click using JS
                     print("✅ Clicked on 'Details' section to reveal Supplier SKU.")
                     time.sleep(3)  # Allow content to expand
                 except Exception as e:
                     print(f"⚠️ 'Details' section not found or could not be clicked: {e}")
 
-                # **Extract Supplier SKU from Page Elements**
+                # **Extract Supplier SKU from Page**
                 supplier_sku = None
                 try:
+                    # Wait for the Supplier SKU to appear
                     supplier_sku_element = WebDriverWait(driver, 5).until(
                         EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku')]/following-sibling::span"))
                     )
