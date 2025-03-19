@@ -13,7 +13,7 @@ def get_footlocker_deals():
     # **Set up WebDriver**
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Remove this line for debugging
+    options.add_argument("--headless")  # Remove for debugging
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
