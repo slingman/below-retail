@@ -69,13 +69,14 @@ def get_footlocker_deals():
                         if color_button:
                             driver.execute_script("arguments[0].click();", color_button)
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
-                            time.sleep(3)  # Allow UI update
+                            time.sleep(4)  # Allow UI update
 
-                        # **Wait until the SKU updates**
-                        WebDriverWait(driver, 8).until(
-                            EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]"))
+                        # **Wait until the Product # updates**
+                        product_number_element = WebDriverWait(driver, 8).until(
+                            EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Product #:')]/following-sibling::span"))
                         )
-                        time.sleep(2)  # Ensure new details load
+                        product_number = product_number_element.text.strip()
+                        print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {product_number}")
 
                         # **Ensure "Details" tab is expanded**
                         try:
@@ -118,6 +119,7 @@ def get_footlocker_deals():
                             footlocker_deals.append({
                                 "store": "Foot Locker",
                                 "product_url": product_url,
+                                "product_number": product_number,
                                 "supplier_sku": sku
                             })
 
