@@ -102,11 +102,13 @@ def get_footlocker_deals():
                         # **Click on Colorway**
                         driver.execute_script("arguments[0].click();", color_button)
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
-                        time.sleep(3)  # Allow page to update
-
-                        # Note: We do not click the 'Details' tab again since it was already opened above.
                         
-                        # **Ensure Supplier SKU is visible**
+                        # Wait until the details panel updates with the new product number.
+                        WebDriverWait(driver, 5).until(
+                            lambda d: colorway_product_number in d.find_element(By.XPATH, details_panel_xpath).text
+                        )
+                        
+                        # Re-fetch the updated details panel and scroll into view.
                         details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                         driver.execute_script("arguments[0].scrollIntoView();", details_panel)
                         time.sleep(1)
