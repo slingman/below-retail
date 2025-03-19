@@ -7,13 +7,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-def extract_footlocker_deals():
+def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
     # **Set up WebDriver**
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Remove for debugging
+    options.add_argument("--headless")  # Remove this line for debugging
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -142,6 +142,9 @@ def extract_footlocker_deals():
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index + 1}] due to error: {e}")
+
+            except Exception as e:
+                print(f"⚠️ Skipping product [{index + 1}] due to error: {e}")
 
     finally:
         driver.quit()
