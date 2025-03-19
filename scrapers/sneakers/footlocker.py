@@ -54,6 +54,17 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
+                # **Click 'Details' tab to ensure visibility**
+                try:
+                    details_tab = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                    )
+                    driver.execute_script("arguments[0].click();", details_tab)
+                    print(f"✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
+                    time.sleep(2)
+                except:
+                    print(f"⚠️ Could not open 'Details' tab initially for product [{index + 1}].")
+
                 # **Extract all colorway buttons**
                 colorway_buttons = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ColorwayStyles-field"))
@@ -85,7 +96,7 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow page to update
 
-                        # **Re-click "Details" tab after switching colorways**
+                        # **Ensure 'Details' tab is clicked again**
                         try:
                             details_tab = WebDriverWait(driver, 5).until(
                                 EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
