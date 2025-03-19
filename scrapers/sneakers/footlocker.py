@@ -77,55 +77,37 @@ def get_footlocker_deals():
                 # **Loop through each colorway**
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
-                        # **Extract Current Product Number Before Clicking**
-                        previous_product_number = driver.execute_script(
-                            "return document.getElementById('ProductDetails_hidden_styleSku')?.value || '';"
-                        ).strip()
-                        print(f"🔎 Before Clicking, Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {previous_product_number}")
-
                         if color_button:
                             # **Ensure Button is Clickable**
                             WebDriverWait(driver, 5).until(EC.element_to_be_clickable(color_button))
 
-                            # **Force Click the Colorway Button multiple times using JavaScript**
-                            driver.execute_script("arguments[0].dispatchEvent(new Event('mouseover', { bubbles: true }));", color_button)
-                            driver.execute_script("arguments[0].dispatchEvent(new Event('mousedown', { bubbles: true }));", color_button)
-                            driver.execute_script("arguments[0].dispatchEvent(new Event('mouseup', { bubbles: true }));", color_button)
+                            # **Click on Colorway**
                             driver.execute_script("arguments[0].click();", color_button)
-
                             print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
+                            time.sleep(3)  # Allow change to take effect
 
-                        # **Wait for Product # to Change**
-                        max_attempts = 10
-                        new_product_number = previous_product_number  # Start with the same value
-                        while max_attempts > 0:
-                            time.sleep(1)  # Wait before checking
+                        # **Click on the "Details" tab (only for the first colorway)**
+                        if color_index == 0:
+                            try:
+                                details_tab = WebDriverWait(driver, 5).until(
+                                    EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                                )
+                                driver.execute_script("arguments[0].click();", details_tab)
+                                print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
+                                time.sleep(2)
+                            except:
+                                print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
 
-                            new_product_number = driver.execute_script(
-                                "return document.getElementById('ProductDetails_hidden_styleSku')?.value || '';"
-                            ).strip()
+                        # **Extract Product Number (Foot Locker ID)**
+                        new_product_number = driver.execute_script(
+                            "return document.getElementById('ProductDetails_hidden_styleSku')?.value || '';"
+                        ).strip()
 
-                            if new_product_number and new_product_number != previous_product_number:
-                                print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {new_product_number}")
-                                break  # Exit loop once Product # updates
-
-                            max_attempts -= 1
-                            print(f"⏳ Waiting for Product # update for product [{index + 1}], colorway [{color_index + 1}]...")
-
-                        if not new_product_number or new_product_number == previous_product_number:
+                        if new_product_number:
+                            print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {new_product_number}")
+                        else:
                             print(f"⚠️ Could not extract updated Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}]. Skipping.")
                             continue  # Move to next colorway
-
-                        # **Ensure "Details" tab is open**
-                        try:
-                            details_tab = WebDriverWait(driver, 5).until(
-                                EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                            )
-                            driver.execute_script("arguments[0].click();", details_tab)
-                            print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
-                            time.sleep(2)
-                        except:
-                            print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Extract Foot Locker Supplier SKU**
                         supplier_skus = []
