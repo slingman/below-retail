@@ -13,7 +13,7 @@ def get_footlocker_deals():
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Remove headless for debugging
+    options.add_argument("--headless")  # Remove for debugging
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -54,6 +54,17 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
+                # **Ensure the "Details" tab is opened FIRST**
+                try:
+                    details_tab = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                    )
+                    driver.execute_script("arguments[0].click();", details_tab)
+                    print(f"✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
+                    time.sleep(2)
+                except:
+                    print(f"⚠️ Could not open 'Details' tab. Proceeding without it.")
+
                 # **Find All Colorway Buttons**
                 colorway_buttons = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ColorwayStyles-field"))
@@ -85,57 +96,45 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow change to take effect
 
-                        # **Wait for the supplier SKU to update**
-                        WebDriverWait(driver, 5).until(
-                            lambda d: colorway_product_number in d.page_source
-                        )
-                        time.sleep(2)  # Extra wait for the details section update
-
-                        # **Click on the "Details" tab (only for the first colorway)**
-                        if color_index == 0:
-                            try:
-                                details_tab = WebDriverWait(driver, 5).until(
-                                    EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                                )
-                                driver.execute_script("arguments[0].click();", details_tab)
-                                print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
-                                time.sleep(2)
-                            except:
-                                print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
-
-                        # **Extract Foot Locker Supplier SKU (Wait for update)**
-                        supplier_skus = []
+                        # **Ensure 'Details' tab is visible after clicking new colorway**
                         try:
-                            sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
-                            for elem in sku_elements:
-                                sku = elem.text.strip()
-                                if sku:
-                                    supplier_skus.append(sku)
-
+                            details_tab = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                            )
+                            driver.execute_script("arguments[0].click();", details_tab)
+                            print(f"✅ Clicked on 'Details' tab again after selecting colorway [{color_index + 1}].")
+                            time.sleep(2)
                         except:
-                            print(f"⚠️ Supplier SKUs not found in page elements for product [{index + 1}], colorway [{color_index + 1}].")
+                            print(f"⚠️ Could not re-open 'Details' tab after clicking colorway [{color_index + 1}].")
+
+                        # **Extract Foot Locker Supplier SKU from Hidden Input Field**
+                        supplier_sku = None
+                        try:
+                            hidden_input = driver.find_element(By.ID, "ProductDetails_hidden_styleSku")
+                            supplier_sku = hidden_input.get_attribute("value").strip()
+                        except:
+                            print(f"⚠️ Supplier SKU not found in hidden input for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Fallback: Extract from Page Source**
-                        if not supplier_skus:
+                        if not supplier_sku:
                             page_source = driver.page_source
-                            matches = re.findall(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
+                            match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
 
-                            if matches:
-                                supplier_skus = list(set(matches))
-                                print(f"✅ Extracted Foot Locker Supplier SKUs from Page Source [{index + 1}], colorway [{color_index + 1}]: {supplier_skus}")
+                            if match:
+                                supplier_sku = match.group(1)
+                                print(f"✅ Extracted Foot Locker Supplier SKU from Page Source [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
                             else:
-                                print(f"❌ Supplier SKUs not found for product [{index + 1}], colorway [{color_index + 1}].")
+                                print(f"❌ Supplier SKU not found for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Store Results**
-                        if colorway_product_number and supplier_skus:
-                            for sku in supplier_skus:
-                                footlocker_deals.append({
-                                    "store": "Foot Locker",
-                                    "product_url": product_url,
-                                    "product_number": colorway_product_number,
-                                    "supplier_sku": sku
-                                })
-                                print(f"✅ Stored SKU: {sku} with Product # {colorway_product_number} for product [{index + 1}], colorway [{color_index + 1}].")
+                        if colorway_product_number and supplier_sku:
+                            footlocker_deals.append({
+                                "store": "Foot Locker",
+                                "product_url": product_url,
+                                "product_number": colorway_product_number,
+                                "supplier_sku": supplier_sku
+                            })
+                            print(f"✅ Stored SKU: {supplier_sku} with Product # {colorway_product_number} for product [{index + 1}], colorway [{color_index + 1}].")
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index + 1}] for product [{index + 1}] due to error: {e}")
