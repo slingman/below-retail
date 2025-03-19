@@ -71,7 +71,13 @@ def get_footlocker_deals():
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
                             time.sleep(3)  # Allow UI update
 
-                        # **Check if the "Details" tab is already open**
+                        # **Wait until Product # and Supplier SKU update**
+                        WebDriverWait(driver, 8).until(
+                            EC.staleness_of(driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]"))
+                        )
+                        time.sleep(2)  # Ensure new details load
+
+                        # **Ensure "Details" tab is expanded**
                         details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
                         is_expanded = details_tab.get_attribute("aria-expanded") == "true"
 
@@ -87,10 +93,11 @@ def get_footlocker_deals():
                         try:
                             product_number_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Product #:')]/following-sibling::text()")
                             product_number = product_number_element.text.strip()
+                            print(f"✅ Extracted Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {product_number}")
                         except:
                             print(f"⚠️ Could not extract Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}].")
 
-                        # **Extract All Available Supplier SKUs**
+                        # **Extract Supplier SKUs**
                         supplier_skus = []
                         try:
                             sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
@@ -126,7 +133,7 @@ def get_footlocker_deals():
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index + 1}] for product [{index + 1}] due to error: {e}")
 
-                # **Introduce a short pause between processing each product**
+                # **Short pause before processing next product**
                 time.sleep(2)
 
             except Exception as e:
