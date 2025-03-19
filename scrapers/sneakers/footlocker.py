@@ -13,7 +13,7 @@ def get_footlocker_deals():
     # **Set up WebDriver**
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Remove for debugging
+    options.add_argument("--headless")  # Remove this for debugging
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -54,7 +54,7 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
-                # **Click 'Details' tab to ensure visibility**
+                # **Ensure 'Details' tab is visible**
                 try:
                     details_tab = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
@@ -96,7 +96,7 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow page to update
 
-                        # **Ensure 'Details' tab is clicked again**
+                        # **Re-open 'Details' tab**
                         try:
                             details_tab = WebDriverWait(driver, 5).until(
                                 EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
@@ -111,7 +111,7 @@ def get_footlocker_deals():
                         supplier_sku = None
                         try:
                             details_panel = WebDriverWait(driver, 5).until(
-                                EC.presence_of_element_located((By.ID, "ProductDetails-tabs-details"))
+                                EC.presence_of_element_located((By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']"))
                             )
                             details_text = details_panel.text
 
