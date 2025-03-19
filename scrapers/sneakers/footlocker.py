@@ -71,6 +71,16 @@ def get_footlocker_deals():
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
                             time.sleep(3)  
 
+                        # **Ensure "Details" tab is open**
+                        try:
+                            details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
+                            if details_tab.get_attribute("aria-expanded") == "false":
+                                driver.execute_script("arguments[0].click();", details_tab)
+                                print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
+                                time.sleep(3)  
+                        except:
+                            print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
+
                         # **Extract Foot Locker Product #**
                         try:
                             product_number_element = WebDriverWait(driver, 5).until(
@@ -81,16 +91,6 @@ def get_footlocker_deals():
                         except:
                             print(f"⚠️ Could not extract Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}].")
                             continue  
-
-                        # **Ensure "Details" tab is open**
-                        try:
-                            details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
-                            if details_tab.get_attribute("aria-expanded") == "false":
-                                driver.execute_script("arguments[0].click();", details_tab)
-                                print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
-                                time.sleep(3)  
-                        except:
-                            print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Extract Foot Locker Supplier SKU**
                         supplier_skus = []
