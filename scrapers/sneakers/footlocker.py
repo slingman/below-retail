@@ -11,7 +11,7 @@ import re
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
-    # **Set up WebDriver**
+    # Set up WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Remove for debugging
@@ -26,7 +26,7 @@ def get_footlocker_deals():
         driver.get(search_url)
         time.sleep(5)
 
-        # **Fetch product cards**
+        # Fetch product cards
         product_cards = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
@@ -37,12 +37,12 @@ def get_footlocker_deals():
 
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
 
-        # **Loop through first 3 product cards**
+        # Loop through first 3 product cards
         for index in range(min(3, len(product_cards))):
             try:
                 print(f"\n🔄 Processing product [{index + 1}]...")
 
-                # **Re-fetch product cards to avoid stale elements**
+                # Re-fetch product cards to avoid stale elements
                 product_cards = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
                 )
@@ -50,11 +50,11 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL [{index + 1}]: {product_url}")
 
-                # **Visit the product page**
+                # Visit the product page
                 driver.get(product_url)
                 time.sleep(5)
 
-                # **Ensure 'Details' tab is open only once per product**
+                # Ensure 'Details' tab is open only once per product
                 details_tab_xpath = "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 try:
@@ -64,62 +64,78 @@ def get_footlocker_deals():
                     if "open" not in details_panel.get_attribute("class"):
                         details_tab = driver.find_element(By.XPATH, details_tab_xpath)
                         driver.execute_script("arguments[0].click();", details_tab)
-                        print(f"✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
+                        print("✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
                         time.sleep(2)
                     else:
-                        print(f"🔄 'Details' tab is already open.")
+                        print("🔄 'Details' tab is already open.")
                 except Exception as e:
                     print(f"⚠️ Could not open 'Details' tab initially for product [{index + 1}]: {e}")
-                    # Skip product if details panel is not found
-                    continue
+                    continue  # Skip product if details panel not found
 
-                # **Extract all colorway buttons**
+                # Extract all colorway buttons
                 colorway_buttons = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ColorwayStyles-field"))
                 )
-
                 if not colorway_buttons:
                     print(f"⚠️ No colorways found for product [{index + 1}]. Extracting default style.")
                     colorway_buttons = [None]
 
                 print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index + 1}].")
 
-                # **Loop through each colorway**
+                prev_supplier_sku = None  # Initialize supplier SKU for the product
+
+                # Loop through each colorway
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
-                        # **Extract Colorway Product Number from Image URL**
+                        # Extract Colorway Product Number from Image URL
                         colorway_img = color_button.find_element(By.TAG_NAME, "img")
                         img_src = colorway_img.get_attribute("src")
                         product_number_match = re.search(r"/([A-Z0-9]+)\?", img_src)
                         colorway_product_number = product_number_match.group(1) if product_number_match else None
-
                         if not colorway_product_number:
                             print(f"⚠️ Could not extract Foot Locker Product # for colorway [{color_index + 1}]. Skipping.")
                             continue
 
                         print(f"🔄 Extracted Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {colorway_product_number}")
 
-                        # **Click on Colorway**
+                        # Click on Colorway thumbnail
                         driver.execute_script("arguments[0].click();", color_button)
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
+
+                        # Wait until details panel shows the new product number and (if applicable) a changed supplier SKU
+                        def details_panel_updated(d):
+                            try:
+                                panel = d.find_element(By.XPATH, details_panel_xpath)
+                                panel_text = panel.text
+                                # Wait until the new product number is in the details panel
+                                if colorway_product_number not in panel_text:
+                                    return False
+                                # If we have a previous SKU, also wait until it changes
+                                if prev_supplier_sku:
+                                    match = re.search(r"Supplier-sku #:\s*(\S+)", panel_text)
+                                    if match and match.group(1) != prev_supplier_sku:
+                                        return True
+                                    else:
+                                        return False
+                                return True
+                            except Exception:
+                                return False
+
+                        WebDriverWait(driver, 5).until(details_panel_updated)
                         
-                        # Wait until the details panel updates with the new product number.
-                        WebDriverWait(driver, 5).until(
-                            lambda d: colorway_product_number in d.find_element(By.XPATH, details_panel_xpath).text
-                        )
-                        
-                        # Re-fetch the updated details panel and scroll into view.
+                        # Re-fetch the updated details panel and scroll into view
                         details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                         driver.execute_script("arguments[0].scrollIntoView();", details_panel)
                         time.sleep(1)
 
-                        # **Extract Supplier SKU from the 'Details' panel**
+                        # Extract Supplier SKU from the details panel
                         supplier_sku = None
                         try:
                             details_spans = details_panel.find_elements(By.TAG_NAME, "span")
                             for span in details_spans:
                                 if "Supplier-sku #" in span.text:
                                     supplier_sku = span.text.split("Supplier-sku #:")[-1].strip()
+                                    break
 
                             if supplier_sku:
                                 print(f"✅ Extracted Supplier SKU for product [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
@@ -128,7 +144,7 @@ def get_footlocker_deals():
                         except Exception as sku_e:
                             print(f"⚠️ Supplier SKU not found in details panel for product [{index + 1}], colorway [{color_index + 1}]: {sku_e}")
 
-                        # **Store Results**
+                        # Store results if both product number and supplier SKU are extracted
                         if colorway_product_number and supplier_sku:
                             footlocker_deals.append({
                                 "store": "Foot Locker",
@@ -137,6 +153,9 @@ def get_footlocker_deals():
                                 "supplier_sku": supplier_sku
                             })
                             print(f"✅ Stored SKU: {supplier_sku} with Product # {colorway_product_number} for product [{index + 1}], colorway [{color_index + 1}].")
+                        
+                        # Update the previous supplier SKU for the next colorway
+                        prev_supplier_sku = supplier_sku
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index + 1}] for product [{index + 1}] due to error: {e}")
