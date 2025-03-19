@@ -10,7 +10,7 @@ import re
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
-    # Set up Selenium WebDriver (Using Stable Version)
+    # Set up Selenium WebDriver (Stable ChromeDriver Version)
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode for efficiency
@@ -32,14 +32,16 @@ def get_footlocker_deals():
 
         if not product_cards:
             print("⚠️ No products found on Foot Locker.")
-            return footlocker_deals  # Return empty if no products are found
+            return footlocker_deals  # Return empty list if no products are found
 
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
 
         # **Loop through multiple product cards**
         for index in range(min(3, len(product_cards))):  # Only checking first 3 products
             try:
-                # **Re-fetch product cards after each iteration to prevent stale elements**
+                print(f"\n🔄 Processing product [{index + 1}]...")
+
+                # **Re-fetch product cards before interacting (to prevent stale elements)**
                 product_cards = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
                 )
@@ -60,10 +62,11 @@ def get_footlocker_deals():
                     driver.execute_script("arguments[0].click();", details_tab)
                     print(f"✅ Clicked on 'Details' section for product [{index + 1}].")
                     time.sleep(3)  # Allow content to expand
-                except:
-                    print(f"⚠️ 'Details' section not found for product [{index + 1}].")
+                except Exception as e:
+                    print(f"⚠️ 'Details' section not found for product [{index + 1}]: {e}")
+                    continue  # Skip to the next product
 
-                # **Extract All Available Styles**
+                # **Extract All Available Supplier SKUs**
                 supplier_skus = []
                 try:
                     sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
@@ -72,8 +75,9 @@ def get_footlocker_deals():
                         if sku:
                             supplier_skus.append(sku)
 
-                except:
-                    print(f"⚠️ Supplier SKUs not found in page elements for product [{index + 1}]. Checking page source...")
+                except Exception as e:
+                    print(f"⚠️ Supplier SKUs not found in page elements for product [{index + 1}]: {e}")
+                    print("🛠️ Attempting fallback extraction from page source...")
 
                 # **Fallback: Extract from Page Source**
                 if not supplier_skus:
@@ -93,6 +97,9 @@ def get_footlocker_deals():
                         "product_url": product_url,
                         "supplier_sku": sku
                     })
+
+                # **Introduce a short pause between processing each product**
+                time.sleep(2)  
 
             except Exception as e:
                 print(f"⚠️ Skipping product [{index + 1}] due to error: {e}")
