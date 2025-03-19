@@ -54,52 +54,72 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)  # Allow full page load
 
-                # **Click 'Details' section to reveal Supplier SKU**
-                try:
-                    details_tab = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                    )
-                    driver.execute_script("arguments[0].click();", details_tab)
-                    print(f"✅ Clicked on 'Details' section for product [{index + 1}].")
-                    time.sleep(3)  # Allow content to expand
-                except Exception as e:
-                    print(f"⚠️ 'Details' section not found for product [{index + 1}]: {e}")
-                    continue  # Skip to the next product
+                # **Find All Available Styles (Colorways)**
+                colorway_buttons = driver.find_elements(By.CLASS_NAME, "ColorwayStyles-field")
 
-                # **Extract All Available Supplier SKUs**
-                supplier_skus = []
-                try:
-                    sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
-                    for elem in sku_elements:
-                        sku = elem.text.strip()
-                        if sku:
-                            supplier_skus.append(sku)
+                if not colorway_buttons:
+                    print(f"⚠️ No colorways found for product [{index + 1}]. Extracting default style.")
+                    colorway_buttons = [None]  # Default to the current selected style
 
-                except Exception as e:
-                    print(f"⚠️ Supplier SKUs not found in page elements for product [{index + 1}]: {e}")
-                    print("🛠️ Attempting fallback extraction from page source...")
+                print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index + 1}].")
 
-                # **Fallback: Extract from Page Source**
-                if not supplier_skus:
-                    page_source = driver.page_source
-                    matches = re.findall(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
+                # **Loop through each available colorway**
+                for color_index, color_button in enumerate(colorway_buttons):
+                    try:
+                        if color_button:
+                            driver.execute_script("arguments[0].click();", color_button)
+                            print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
+                            time.sleep(3)  # Allow UI update
 
-                    if matches:
-                        supplier_skus = list(set(matches))  # Remove duplicates
-                        print(f"✅ Extracted Foot Locker Supplier SKUs from Page Source [{index + 1}]: {supplier_skus}")
-                    else:
-                        print(f"❌ Supplier SKUs not found for product [{index + 1}].")
+                        # **Click 'Details' section to reveal Supplier SKU**
+                        try:
+                            details_tab = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                            )
+                            driver.execute_script("arguments[0].click();", details_tab)
+                            print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
+                            time.sleep(3)  # Allow content to expand
+                        except Exception as e:
+                            print(f"⚠️ 'Details' section not found for product [{index + 1}], colorway [{color_index + 1}]: {e}")
+                            continue  # Skip to the next colorway
 
-                # **Store the extracted SKUs**
-                for sku in supplier_skus:
-                    footlocker_deals.append({
-                        "store": "Foot Locker",
-                        "product_url": product_url,
-                        "supplier_sku": sku
-                    })
+                        # **Extract All Available Supplier SKUs**
+                        supplier_skus = []
+                        try:
+                            sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
+                            for elem in sku_elements:
+                                sku = elem.text.strip()
+                                if sku:
+                                    supplier_skus.append(sku)
+
+                        except Exception as e:
+                            print(f"⚠️ Supplier SKUs not found in page elements for product [{index + 1}], colorway [{color_index + 1}]: {e}")
+                            print("🛠️ Attempting fallback extraction from page source...")
+
+                        # **Fallback: Extract from Page Source**
+                        if not supplier_skus:
+                            page_source = driver.page_source
+                            matches = re.findall(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
+
+                            if matches:
+                                supplier_skus = list(set(matches))  # Remove duplicates
+                                print(f"✅ Extracted Foot Locker Supplier SKUs from Page Source [{index + 1}], colorway [{color_index + 1}]: {supplier_skus}")
+                            else:
+                                print(f"❌ Supplier SKUs not found for product [{index + 1}], colorway [{color_index + 1}].")
+
+                        # **Store the extracted SKUs**
+                        for sku in supplier_skus:
+                            footlocker_deals.append({
+                                "store": "Foot Locker",
+                                "product_url": product_url,
+                                "supplier_sku": sku
+                            })
+
+                    except Exception as e:
+                        print(f"⚠️ Skipping colorway [{color_index + 1}] for product [{index + 1}] due to error: {e}")
 
                 # **Introduce a short pause between processing each product**
-                time.sleep(2)  
+                time.sleep(2)
 
             except Exception as e:
                 print(f"⚠️ Skipping product [{index + 1}] due to error: {e}")
