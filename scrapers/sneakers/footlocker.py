@@ -81,14 +81,15 @@ def get_footlocker_deals():
                         previous_product_number = driver.execute_script(
                             "return document.getElementById('ProductDetails_hidden_styleSku')?.value || '';"
                         ).strip()
+                        print(f"🔎 Before Clicking, Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {previous_product_number}")
 
                         if color_button:
                             # **Ensure Button is Clickable**
                             WebDriverWait(driver, 5).until(EC.element_to_be_clickable(color_button))
 
-                            # **Click on the Colorway**
+                            # **Force Click the Colorway Button using JavaScript**
                             driver.execute_script("arguments[0].click();", color_button)
-                            print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
+                            print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
 
                         # **Wait for Product # to Change**
                         max_attempts = 5
