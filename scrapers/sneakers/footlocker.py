@@ -46,7 +46,6 @@ def get_footlocker_deals():
                 product_cards = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
                 )
-
                 card = product_cards[index]
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL [{index + 1}]: {product_url}")
@@ -55,11 +54,13 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
-                # **Ensure 'Details' tab is open once per product**
+                # **Ensure 'Details' tab is open only once per product**
                 details_tab_xpath = "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 try:
-                    details_panel = driver.find_element(By.XPATH, details_panel_xpath)
+                    details_panel = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located((By.XPATH, details_panel_xpath))
+                    )
                     if "open" not in details_panel.get_attribute("class"):
                         details_tab = driver.find_element(By.XPATH, details_tab_xpath)
                         driver.execute_script("arguments[0].click();", details_tab)
@@ -69,6 +70,8 @@ def get_footlocker_deals():
                         print(f"🔄 'Details' tab is already open.")
                 except Exception as e:
                     print(f"⚠️ Could not open 'Details' tab initially for product [{index + 1}]: {e}")
+                    # Skip product if details panel is not found
+                    continue
 
                 # **Extract all colorway buttons**
                 colorway_buttons = WebDriverWait(driver, 10).until(
@@ -101,8 +104,7 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow page to update
 
-                        # Note: We no longer click the 'Details' tab for subsequent colorways,
-                        # since it was already opened above for this product.
+                        # Note: We do not click the 'Details' tab again since it was already opened above.
                         
                         # **Ensure Supplier SKU is visible**
                         details_panel = driver.find_element(By.XPATH, details_panel_xpath)
