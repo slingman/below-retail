@@ -13,7 +13,7 @@ def get_footlocker_deals():
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Remove headless for debugging if needed
+    options.add_argument("--headless")  # Remove headless for debugging
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -85,6 +85,12 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow change to take effect
 
+                        # **Wait for the supplier SKU to update**
+                        WebDriverWait(driver, 5).until(
+                            lambda d: colorway_product_number in d.page_source
+                        )
+                        time.sleep(2)  # Extra wait for the details section update
+
                         # **Click on the "Details" tab (only for the first colorway)**
                         if color_index == 0:
                             try:
@@ -97,7 +103,7 @@ def get_footlocker_deals():
                             except:
                                 print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
 
-                        # **Extract Foot Locker Supplier SKU**
+                        # **Extract Foot Locker Supplier SKU (Wait for update)**
                         supplier_skus = []
                         try:
                             sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
