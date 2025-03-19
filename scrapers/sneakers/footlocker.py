@@ -69,7 +69,7 @@ def get_footlocker_deals():
                         if color_button:
                             driver.execute_script("arguments[0].click();", color_button)
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
-                            time.sleep(3)  
+                            time.sleep(4)  # **Wait for UI to update**
 
                         # **Ensure "Details" tab is open**
                         try:
@@ -116,14 +116,18 @@ def get_footlocker_deals():
                             else:
                                 print(f"❌ Supplier SKUs not found for product [{index + 1}], colorway [{color_index + 1}].")
 
-                        # **Store the extracted SKUs**
-                        for sku in supplier_skus:
-                            footlocker_deals.append({
-                                "store": "Foot Locker",
-                                "product_url": product_url,
-                                "product_number": product_number,
-                                "supplier_sku": sku
-                            })
+                        # **Validate SKU Change**
+                        if color_index > 0 and supplier_skus == footlocker_deals[-1]["supplier_sku"]:
+                            print(f"⚠️ Supplier SKU did not change for colorway [{color_index + 1}].")
+                        else:
+                            for sku in supplier_skus:
+                                footlocker_deals.append({
+                                    "store": "Foot Locker",
+                                    "product_url": product_url,
+                                    "product_number": product_number,
+                                    "supplier_sku": sku
+                                })
+                                print(f"✅ Stored SKU: {sku} for product [{index + 1}], colorway [{color_index + 1}].")
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index + 1}] for product [{index + 1}] due to error: {e}")
