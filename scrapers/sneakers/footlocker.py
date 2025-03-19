@@ -41,7 +41,7 @@ def get_footlocker_deals():
             try:
                 print(f"\n🔄 Processing product [{index + 1}]...")
 
-                # **Re-fetch product cards before interacting (prevents stale elements)**
+                # **Re-fetch product cards to prevent stale elements**
                 product_cards = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
                 )
@@ -64,12 +64,14 @@ def get_footlocker_deals():
                 print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index + 1}].")
 
                 # **Loop through each colorway**
+                last_sku = None
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
                         if color_button:
+                            # **Click on the Colorway**
                             driver.execute_script("arguments[0].click();", color_button)
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
-                            time.sleep(4)  # **Wait for UI to update**
+                            time.sleep(2)  # Allow content update
 
                         # **Ensure "Details" tab is open**
                         try:
@@ -77,14 +79,14 @@ def get_footlocker_deals():
                             if details_tab.get_attribute("aria-expanded") == "false":
                                 driver.execute_script("arguments[0].click();", details_tab)
                                 print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
-                                time.sleep(3)  
+                                time.sleep(2)  
                         except:
                             print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Extract Foot Locker Product #**
                         try:
                             product_number_element = WebDriverWait(driver, 5).until(
-                                EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Product #:')]/following-sibling::span"))
+                                EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Product #:')]/following-sibling::text()"))
                             )
                             product_number = product_number_element.text.strip()
                             print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {product_number}")
