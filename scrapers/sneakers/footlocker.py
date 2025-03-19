@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -54,10 +55,9 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
-                # **Ensure 'Details' tab is open**
+                # **Ensure 'Details' tab is open once per product**
                 details_tab_xpath = "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
-
                 try:
                     details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                     if "open" not in details_panel.get_attribute("class"):
@@ -67,8 +67,8 @@ def get_footlocker_deals():
                         time.sleep(2)
                     else:
                         print(f"🔄 'Details' tab is already open.")
-                except:
-                    print(f"⚠️ Could not open 'Details' tab initially for product [{index + 1}].")
+                except Exception as e:
+                    print(f"⚠️ Could not open 'Details' tab initially for product [{index + 1}]: {e}")
 
                 # **Extract all colorway buttons**
                 colorway_buttons = WebDriverWait(driver, 10).until(
@@ -77,7 +77,7 @@ def get_footlocker_deals():
 
                 if not colorway_buttons:
                     print(f"⚠️ No colorways found for product [{index + 1}]. Extracting default style.")
-                    colorway_buttons = [None]  
+                    colorway_buttons = [None]
 
                 print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index + 1}].")
 
@@ -101,20 +101,11 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow page to update
 
-                        # **Ensure 'Details' tab is open**
-                        try:
-                            details_panel = driver.find_element(By.XPATH, details_panel_xpath)
-                            if "open" not in details_panel.get_attribute("class"):
-                                details_tab = driver.find_element(By.XPATH, details_tab_xpath)
-                                driver.execute_script("arguments[0].click();", details_tab)
-                                print(f"✅ Clicked on 'Details' tab again after selecting colorway [{color_index + 1}].")
-                                time.sleep(2)
-                            else:
-                                print(f"🔄 'Details' tab is already open for colorway [{color_index + 1}].")
-                        except:
-                            print(f"⚠️ Could not ensure 'Details' tab is open for colorway [{color_index + 1}].")
-
+                        # Note: We no longer click the 'Details' tab for subsequent colorways,
+                        # since it was already opened above for this product.
+                        
                         # **Ensure Supplier SKU is visible**
+                        details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                         driver.execute_script("arguments[0].scrollIntoView();", details_panel)
                         time.sleep(1)
 
@@ -130,8 +121,8 @@ def get_footlocker_deals():
                                 print(f"✅ Extracted Supplier SKU for product [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
                             else:
                                 print(f"⚠️ Could not extract Supplier SKU for product [{index + 1}], colorway [{color_index + 1}].")
-                        except:
-                            print(f"⚠️ Supplier SKU not found in details panel for product [{index + 1}], colorway [{color_index + 1}].")
+                        except Exception as sku_e:
+                            print(f"⚠️ Supplier SKU not found in details panel for product [{index + 1}], colorway [{color_index + 1}]: {sku_e}")
 
                         # **Store Results**
                         if colorway_product_number and supplier_sku:
@@ -155,3 +146,9 @@ def get_footlocker_deals():
         driver.quit()
 
     return footlocker_deals
+
+if __name__ == "__main__":
+    deals = get_footlocker_deals()
+    print("\nFinal Foot Locker Deals:")
+    for deal in deals:
+        print(deal)
