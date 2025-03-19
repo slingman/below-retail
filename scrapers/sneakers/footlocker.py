@@ -10,7 +10,7 @@ import re
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
-    # Set up Selenium WebDriver
+    # Set up Selenium WebDriver (Using Stable Version)
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode for efficiency
@@ -25,8 +25,11 @@ def get_footlocker_deals():
         driver.get(search_url)
         time.sleep(5)  # Allow page to load
 
-        # **Get all product cards on the search page**
-        product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
+        # **Fetch all product cards on the search page**
+        product_cards = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
+        )
+
         if not product_cards:
             print("⚠️ No products found on Foot Locker.")
             return footlocker_deals  # Return empty if no products are found
@@ -34,8 +37,14 @@ def get_footlocker_deals():
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
 
         # **Loop through multiple product cards**
-        for index, card in enumerate(product_cards[:3]):  # Only checking 3 products for now
+        for index in range(min(3, len(product_cards))):  # Only checking first 3 products
             try:
+                # **Re-fetch product cards after each iteration to prevent stale elements**
+                product_cards = WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
+                )
+
+                card = product_cards[index]
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL [{index + 1}]: {product_url}")
 
@@ -86,7 +95,7 @@ def get_footlocker_deals():
                     })
 
             except Exception as e:
-                print(f"⚠️ Skipping a product [{index + 1}] due to error: {e}")
+                print(f"⚠️ Skipping product [{index + 1}] due to error: {e}")
 
     finally:
         driver.quit()
