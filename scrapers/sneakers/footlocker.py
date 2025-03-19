@@ -92,7 +92,7 @@ def get_footlocker_deals():
                             print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
 
                         # **Wait for Product # to Change**
-                        max_attempts = 5
+                        max_attempts = 10
                         new_product_number = previous_product_number  # Start with the same value
                         while max_attempts > 0:
                             time.sleep(1)  # Wait before checking
@@ -106,6 +106,7 @@ def get_footlocker_deals():
                                 break  # Exit loop once Product # updates
 
                             max_attempts -= 1
+                            print(f"⏳ Waiting for Product # update for product [{index + 1}], colorway [{color_index + 1}]...")
 
                         if not new_product_number or new_product_number == previous_product_number:
                             print(f"⚠️ Could not extract updated Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}]. Skipping.")
