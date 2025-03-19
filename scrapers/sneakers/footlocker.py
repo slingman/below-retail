@@ -23,7 +23,7 @@ def get_footlocker_deals():
 
     try:
         driver.get(search_url)
-        time.sleep(5)  # Allow page to load
+        time.sleep(5)
 
         # **Fetch all product cards**
         product_cards = WebDriverWait(driver, 10).until(
@@ -63,7 +63,7 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
-                # **Find All Colorways**
+                # **Find All Colorway Buttons**
                 colorway_buttons = driver.find_elements(By.CLASS_NAME, "ColorwayStyles-field")
 
                 if not colorway_buttons:
@@ -81,6 +81,28 @@ def get_footlocker_deals():
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
                             time.sleep(2)  # Allow content update
 
+                        # **Wait for Product # to Change Dynamically**
+                        previous_product_number = product_number  # Store previous product number
+                        new_product_number = None
+                        max_attempts = 5  # Avoid infinite loop
+
+                        while max_attempts > 0:
+                            try:
+                                new_product_number_element = driver.find_element(By.ID, "ProductDetails_hidden_styleSku")
+                                new_product_number = new_product_number_element.get_attribute("value").strip()
+
+                                if new_product_number and new_product_number != previous_product_number:
+                                    print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {new_product_number}")
+                                    break  # Exit loop once Product # updates
+                            except:
+                                print(f"⏳ Waiting for Product # update for product [{index + 1}], colorway [{color_index + 1}]...")
+                                time.sleep(1)
+                                max_attempts -= 1
+
+                        if not new_product_number:
+                            print(f"⚠️ Could not extract Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}].")
+                            continue  # Skip if no product number
+
                         # **Ensure "Details" tab is open**
                         try:
                             details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
@@ -90,17 +112,6 @@ def get_footlocker_deals():
                                 time.sleep(2)
                         except:
                             print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
-
-                        # **Extract Foot Locker Product #**
-                        new_product_number = None
-                        try:
-                            new_product_number_element = WebDriverWait(driver, 5).until(
-                                EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Product #:')]/following-sibling::*"))
-                            )
-                            new_product_number = new_product_number_element.text.strip()
-                            print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {new_product_number}")
-                        except:
-                            print(f"⚠️ Could not extract Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Extract Foot Locker Supplier SKU**
                         supplier_skus = []
