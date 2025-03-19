@@ -54,14 +54,19 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
-                # **Ensure 'Details' tab is visible**
+                # **Ensure 'Details' tab is open**
+                details_tab_xpath = "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"
+                details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
+
                 try:
-                    details_tab = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                    )
-                    driver.execute_script("arguments[0].click();", details_tab)
-                    print(f"✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
-                    time.sleep(2)
+                    details_panel = driver.find_element(By.XPATH, details_panel_xpath)
+                    if "open" not in details_panel.get_attribute("class"):
+                        details_tab = driver.find_element(By.XPATH, details_tab_xpath)
+                        driver.execute_script("arguments[0].click();", details_tab)
+                        print(f"✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
+                        time.sleep(2)
+                    else:
+                        print(f"🔄 'Details' tab is already open.")
                 except:
                     print(f"⚠️ Could not open 'Details' tab initially for product [{index + 1}].")
 
@@ -96,28 +101,32 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow page to update
 
-                        # **Re-open 'Details' tab**
+                        # **Check if 'Details' tab is already open before clicking**
                         try:
-                            details_tab = WebDriverWait(driver, 5).until(
-                                EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                            )
-                            driver.execute_script("arguments[0].click();", details_tab)
-                            print(f"✅ Clicked on 'Details' tab again after selecting colorway [{color_index + 1}].")
-                            time.sleep(2)
+                            details_panel = driver.find_element(By.XPATH, details_panel_xpath)
+                            if "open" not in details_panel.get_attribute("class"):
+                                details_tab = driver.find_element(By.XPATH, details_tab_xpath)
+                                driver.execute_script("arguments[0].click();", details_tab)
+                                print(f"✅ Clicked on 'Details' tab again after selecting colorway [{color_index + 1}].")
+                                time.sleep(2)
+                            else:
+                                print(f"🔄 'Details' tab is already open for colorway [{color_index + 1}].")
                         except:
-                            print(f"⚠️ Could not re-open 'Details' tab after clicking colorway [{color_index + 1}].")
+                            print(f"⚠️ Could not ensure 'Details' tab is open for colorway [{color_index + 1}].")
 
                         # **Extract Supplier SKU from the 'Details' panel**
                         supplier_sku = None
                         try:
-                            details_panel = WebDriverWait(driver, 5).until(
-                                EC.presence_of_element_located((By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']"))
-                            )
                             details_text = details_panel.text
 
                             # **Find Supplier SKU using regex**
                             sku_match = re.search(r"Supplier-sku #:\s*([\w-]+)", details_text)
                             supplier_sku = sku_match.group(1) if sku_match else None
+
+                            if supplier_sku:
+                                print(f"✅ Extracted Supplier SKU for product [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
+                            else:
+                                print(f"⚠️ Could not extract Supplier SKU for product [{index + 1}], colorway [{color_index + 1}].")
                         except:
                             print(f"⚠️ Supplier SKU not found in details panel for product [{index + 1}], colorway [{color_index + 1}].")
 
