@@ -13,7 +13,7 @@ def get_footlocker_deals():
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
+    options.add_argument("--headless")  # Remove headless for debugging if needed
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -50,15 +50,6 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL [{index + 1}]: {product_url}")
 
-                # **Extract the first colorway's product number from the URL**
-                product_number_match = re.search(r'/product/[^/]+/([\w\d]+)\.html', product_url)
-                product_number = product_number_match.group(1) if product_number_match else None
-
-                if product_number:
-                    print(f"🔄 Initial Foot Locker Product # [{index + 1}]: {product_number}")
-                else:
-                    print(f"⚠️ Could not extract initial Foot Locker Product # for product [{index + 1}].")
-
                 # Visit product page
                 driver.get(product_url)
                 time.sleep(5)
@@ -77,14 +68,22 @@ def get_footlocker_deals():
                 # **Loop through each colorway**
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
-                        if color_button:
-                            # **Ensure Button is Clickable**
-                            WebDriverWait(driver, 5).until(EC.element_to_be_clickable(color_button))
+                        # **Extract Colorway Product Number from Image URL**
+                        colorway_img = color_button.find_element(By.TAG_NAME, "img")
+                        img_src = colorway_img.get_attribute("src")
+                        product_number_match = re.search(r"/([A-Z0-9]+)\?", img_src)
+                        colorway_product_number = product_number_match.group(1) if product_number_match else None
 
-                            # **Click on Colorway**
-                            driver.execute_script("arguments[0].click();", color_button)
-                            print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
-                            time.sleep(3)  # Allow change to take effect
+                        if not colorway_product_number:
+                            print(f"⚠️ Could not extract Foot Locker Product # for colorway [{color_index + 1}]. Skipping.")
+                            continue
+
+                        print(f"🔄 Extracted Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {colorway_product_number}")
+
+                        # **Click on Colorway**
+                        driver.execute_script("arguments[0].click();", color_button)
+                        print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
+                        time.sleep(3)  # Allow change to take effect
 
                         # **Click on the "Details" tab (only for the first colorway)**
                         if color_index == 0:
@@ -97,17 +96,6 @@ def get_footlocker_deals():
                                 time.sleep(2)
                             except:
                                 print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
-
-                        # **Extract Product Number (Foot Locker ID)**
-                        new_product_number = driver.execute_script(
-                            "return document.getElementById('ProductDetails_hidden_styleSku')?.value || '';"
-                        ).strip()
-
-                        if new_product_number:
-                            print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {new_product_number}")
-                        else:
-                            print(f"⚠️ Could not extract updated Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}]. Skipping.")
-                            continue  # Move to next colorway
 
                         # **Extract Foot Locker Supplier SKU**
                         supplier_skus = []
@@ -133,15 +121,15 @@ def get_footlocker_deals():
                                 print(f"❌ Supplier SKUs not found for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Store Results**
-                        if new_product_number and supplier_skus:
+                        if colorway_product_number and supplier_skus:
                             for sku in supplier_skus:
                                 footlocker_deals.append({
                                     "store": "Foot Locker",
                                     "product_url": product_url,
-                                    "product_number": new_product_number,
+                                    "product_number": colorway_product_number,
                                     "supplier_sku": sku
                                 })
-                                print(f"✅ Stored SKU: {sku} with Product # {new_product_number} for product [{index + 1}], colorway [{color_index + 1}].")
+                                print(f"✅ Stored SKU: {sku} with Product # {colorway_product_number} for product [{index + 1}], colorway [{color_index + 1}].")
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index + 1}] for product [{index + 1}] due to error: {e}")
