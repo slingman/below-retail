@@ -64,7 +64,9 @@ def get_footlocker_deals():
                 time.sleep(5)
 
                 # **Find All Colorway Buttons**
-                colorway_buttons = driver.find_elements(By.CLASS_NAME, "ColorwayStyles-field")
+                colorway_buttons = WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.CLASS_NAME, "ColorwayStyles-field"))
+                )
 
                 if not colorway_buttons:
                     print(f"⚠️ No colorways found for product [{index + 1}]. Extracting default style.")
@@ -75,41 +77,47 @@ def get_footlocker_deals():
                 # **Loop through each colorway**
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
+                        # **Extract Current Product Number Before Clicking**
+                        previous_product_number = driver.execute_script(
+                            "return document.getElementById('ProductDetails_hidden_styleSku')?.value || '';"
+                        ).strip()
+
                         if color_button:
+                            # **Ensure Button is Clickable**
+                            WebDriverWait(driver, 5).until(EC.element_to_be_clickable(color_button))
+
                             # **Click on the Colorway**
                             driver.execute_script("arguments[0].click();", color_button)
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
-                            time.sleep(2)  # Allow content update
 
-                        # **Wait for Product # to Change Dynamically**
-                        previous_product_number = product_number  # Store previous product number
-                        new_product_number = None
-                        max_attempts = 5  # Avoid infinite loop
-
+                        # **Wait for Product # to Change**
+                        max_attempts = 5
+                        new_product_number = previous_product_number  # Start with the same value
                         while max_attempts > 0:
-                            try:
-                                new_product_number_element = driver.find_element(By.ID, "ProductDetails_hidden_styleSku")
-                                new_product_number = new_product_number_element.get_attribute("value").strip()
+                            time.sleep(1)  # Wait before checking
 
-                                if new_product_number and new_product_number != previous_product_number:
-                                    print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {new_product_number}")
-                                    break  # Exit loop once Product # updates
-                            except:
-                                print(f"⏳ Waiting for Product # update for product [{index + 1}], colorway [{color_index + 1}]...")
-                                time.sleep(1)
-                                max_attempts -= 1
+                            new_product_number = driver.execute_script(
+                                "return document.getElementById('ProductDetails_hidden_styleSku')?.value || '';"
+                            ).strip()
 
-                        if not new_product_number:
-                            print(f"⚠️ Could not extract Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}].")
-                            continue  # Skip if no product number
+                            if new_product_number and new_product_number != previous_product_number:
+                                print(f"🔄 Updated Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {new_product_number}")
+                                break  # Exit loop once Product # updates
+
+                            max_attempts -= 1
+
+                        if not new_product_number or new_product_number == previous_product_number:
+                            print(f"⚠️ Could not extract updated Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}]. Skipping.")
+                            continue  # Move to next colorway
 
                         # **Ensure "Details" tab is open**
                         try:
-                            details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
-                            if details_tab.get_attribute("aria-expanded") == "false":
-                                driver.execute_script("arguments[0].click();", details_tab)
-                                print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
-                                time.sleep(2)
+                            details_tab = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
+                            )
+                            driver.execute_script("arguments[0].click();", details_tab)
+                            print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
+                            time.sleep(2)
                         except:
                             print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
 
