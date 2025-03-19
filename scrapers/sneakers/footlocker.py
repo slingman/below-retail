@@ -71,33 +71,25 @@ def get_footlocker_deals():
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
                             time.sleep(3)  # Allow UI update
 
-                        # **Wait until Product # and Supplier SKU update**
+                        # **Wait until the SKU updates**
                         WebDriverWait(driver, 8).until(
-                            EC.staleness_of(driver.find_element(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]"))
+                            EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]"))
                         )
                         time.sleep(2)  # Ensure new details load
 
                         # **Ensure "Details" tab is expanded**
-                        details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
-                        is_expanded = details_tab.get_attribute("aria-expanded") == "true"
-
-                        if not is_expanded:
-                            driver.execute_script("arguments[0].click();", details_tab)
-                            print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
-                            time.sleep(3)  # Allow content to expand
-                        else:
-                            print(f"🔄 'Details' tab already open for product [{index + 1}], colorway [{color_index + 1}].")
-
-                        # **Extract Foot Locker Product Number (Unique ID per Colorway)**
-                        product_number = None
                         try:
-                            product_number_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Product #:')]/following-sibling::text()")
-                            product_number = product_number_element.text.strip()
-                            print(f"✅ Extracted Foot Locker Product # [{index + 1}], colorway [{color_index + 1}]: {product_number}")
-                        except:
-                            print(f"⚠️ Could not extract Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}].")
+                            details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
+                            if details_tab.get_attribute("aria-expanded") == "false":
+                                driver.execute_script("arguments[0].click();", details_tab)
+                                print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
+                                time.sleep(3)  # Allow content to expand
+                            else:
+                                print(f"🔄 'Details' tab already open for product [{index + 1}], colorway [{color_index + 1}].")
+                        except Exception:
+                            print(f"⚠️ Could not open 'Details' tab for product [{index + 1}], colorway [{color_index + 1}].")
 
-                        # **Extract Supplier SKUs**
+                        # **Extract Foot Locker Supplier SKU**
                         supplier_skus = []
                         try:
                             sku_elements = driver.find_elements(By.XPATH, "//span[contains(text(), 'Supplier-sku #:')]/following-sibling::span")
@@ -126,7 +118,6 @@ def get_footlocker_deals():
                             footlocker_deals.append({
                                 "store": "Foot Locker",
                                 "product_url": product_url,
-                                "product_number": product_number,
                                 "supplier_sku": sku
                             })
 
