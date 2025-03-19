@@ -1,11 +1,11 @@
+import time
+import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-import time
-import re
 
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
@@ -114,24 +114,25 @@ def get_footlocker_deals():
                         except:
                             print(f"⚠️ Could not ensure 'Details' tab is open for colorway [{color_index + 1}].")
 
-                        # **Ensure Supplier SKU is visible**
-                        driver.execute_script("arguments[0].scrollIntoView();", details_panel)
-                        time.sleep(1)
-
-                        # **Extract Supplier SKU from the 'Details' panel**
+                        # **Wait for Supplier SKU to update**
                         supplier_sku = None
-                        try:
-                            details_spans = details_panel.find_elements(By.TAG_NAME, "span")
-                            for span in details_spans:
-                                if "Supplier-sku #" in span.text:
-                                    supplier_sku = span.text.split("Supplier-sku #:")[-1].strip()
+                        for _ in range(5):  # Retry multiple times
+                            try:
+                                details_spans = details_panel.find_elements(By.TAG_NAME, "span")
+                                for span in details_spans:
+                                    if "Supplier-sku #" in span.text:
+                                        supplier_sku = span.text.split("Supplier-sku #:")[-1].strip()
+                                        break
+                                if supplier_sku:
+                                    break
+                                time.sleep(1)  
+                            except:
+                                continue
 
-                            if supplier_sku:
-                                print(f"✅ Extracted Supplier SKU for product [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
-                            else:
-                                print(f"⚠️ Could not extract Supplier SKU for product [{index + 1}], colorway [{color_index + 1}].")
-                        except:
-                            print(f"⚠️ Supplier SKU not found in details panel for product [{index + 1}], colorway [{color_index + 1}].")
+                        if supplier_sku:
+                            print(f"✅ Extracted Supplier SKU for product [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
+                        else:
+                            print(f"⚠️ Could not extract Supplier SKU for product [{index + 1}], colorway [{color_index + 1}]. Retrying...")
 
                         # **Store Results**
                         if colorway_product_number and supplier_sku:
