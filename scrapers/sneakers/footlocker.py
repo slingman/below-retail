@@ -10,7 +10,7 @@ import re
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
-    # Set up Selenium WebDriver
+    # **Set up WebDriver**
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Remove for debugging
@@ -25,7 +25,7 @@ def get_footlocker_deals():
         driver.get(search_url)
         time.sleep(5)
 
-        # **Fetch all product cards**
+        # **Fetch product cards**
         product_cards = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
@@ -41,7 +41,7 @@ def get_footlocker_deals():
             try:
                 print(f"\n🔄 Processing product [{index + 1}]...")
 
-                # **Re-fetch product cards to prevent stale elements**
+                # **Re-fetch product cards to avoid stale elements**
                 product_cards = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
                 )
@@ -50,7 +50,7 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL [{index + 1}]: {product_url}")
 
-                # Visit product page
+                # **Visit the product page**
                 driver.get(product_url)
                 time.sleep(5)
 
@@ -107,13 +107,19 @@ def get_footlocker_deals():
                         except:
                             print(f"⚠️ Could not re-open 'Details' tab after clicking colorway [{color_index + 1}].")
 
-                        # **Extract Supplier SKU from Hidden Input**
+                        # **Extract Supplier SKU from the 'Details' panel**
                         supplier_sku = None
                         try:
-                            hidden_input = driver.find_element(By.ID, "ProductDetails_hidden_styleSku")
-                            supplier_sku = hidden_input.get_attribute("value").strip()
+                            details_panel = WebDriverWait(driver, 5).until(
+                                EC.presence_of_element_located((By.ID, "ProductDetails-tabs-details"))
+                            )
+                            details_text = details_panel.text
+
+                            # **Find Supplier SKU using regex**
+                            sku_match = re.search(r"Supplier-sku #:\s*([\w-]+)", details_text)
+                            supplier_sku = sku_match.group(1) if sku_match else None
                         except:
-                            print(f"⚠️ Supplier SKU not found in hidden input for product [{index + 1}], colorway [{color_index + 1}].")
+                            print(f"⚠️ Supplier SKU not found in details panel for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Store Results**
                         if colorway_product_number and supplier_sku:
