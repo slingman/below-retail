@@ -87,8 +87,12 @@ def get_footlocker_deals():
                             # **Ensure Button is Clickable**
                             WebDriverWait(driver, 5).until(EC.element_to_be_clickable(color_button))
 
-                            # **Force Click the Colorway Button using JavaScript**
+                            # **Force Click the Colorway Button multiple times using JavaScript**
+                            driver.execute_script("arguments[0].dispatchEvent(new Event('mouseover', { bubbles: true }));", color_button)
+                            driver.execute_script("arguments[0].dispatchEvent(new Event('mousedown', { bubbles: true }));", color_button)
+                            driver.execute_script("arguments[0].dispatchEvent(new Event('mouseup', { bubbles: true }));", color_button)
                             driver.execute_script("arguments[0].click();", color_button)
+
                             print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
 
                         # **Wait for Product # to Change**
