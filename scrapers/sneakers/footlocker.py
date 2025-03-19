@@ -71,17 +71,24 @@ def get_footlocker_deals():
                             print(f"✅ Selected colorway [{color_index + 1}] for product [{index + 1}].")
                             time.sleep(3)  # Allow UI update
 
-                        # **Click 'Details' section to reveal Supplier SKU**
-                        try:
-                            details_tab = WebDriverWait(driver, 5).until(
-                                EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                            )
+                        # **Check if the "Details" tab is already open**
+                        details_tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
+                        is_expanded = details_tab.get_attribute("aria-expanded") == "true"
+
+                        if not is_expanded:
                             driver.execute_script("arguments[0].click();", details_tab)
                             print(f"✅ Clicked on 'Details' section for product [{index + 1}], colorway [{color_index + 1}].")
                             time.sleep(3)  # Allow content to expand
-                        except Exception as e:
-                            print(f"⚠️ 'Details' section not found for product [{index + 1}], colorway [{color_index + 1}]: {e}")
-                            continue  # Skip to the next colorway
+                        else:
+                            print(f"🔄 'Details' tab already open for product [{index + 1}], colorway [{color_index + 1}].")
+
+                        # **Extract Foot Locker Product Number (Unique ID per Colorway)**
+                        product_number = None
+                        try:
+                            product_number_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Product #:')]/following-sibling::text()")
+                            product_number = product_number_element.text.strip()
+                        except:
+                            print(f"⚠️ Could not extract Foot Locker Product # for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Extract All Available Supplier SKUs**
                         supplier_skus = []
@@ -112,6 +119,7 @@ def get_footlocker_deals():
                             footlocker_deals.append({
                                 "store": "Foot Locker",
                                 "product_url": product_url,
+                                "product_number": product_number,
                                 "supplier_sku": sku
                             })
 
