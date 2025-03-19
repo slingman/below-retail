@@ -7,7 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
 
-def get_footlocker_deals():
+def extract_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
     # Set up Selenium WebDriver
@@ -54,18 +54,7 @@ def get_footlocker_deals():
                 driver.get(product_url)
                 time.sleep(5)
 
-                # **Ensure the "Details" tab is opened FIRST**
-                try:
-                    details_tab = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
-                    )
-                    driver.execute_script("arguments[0].click();", details_tab)
-                    print(f"✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
-                    time.sleep(2)
-                except:
-                    print(f"⚠️ Could not open 'Details' tab. Proceeding without it.")
-
-                # **Find All Colorway Buttons**
+                # **Extract all colorway buttons**
                 colorway_buttons = WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ColorwayStyles-field"))
                 )
@@ -94,9 +83,9 @@ def get_footlocker_deals():
                         # **Click on Colorway**
                         driver.execute_script("arguments[0].click();", color_button)
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
-                        time.sleep(3)  # Allow change to take effect
+                        time.sleep(3)  # Allow page to update
 
-                        # **Ensure 'Details' tab is visible after clicking new colorway**
+                        # **Re-click "Details" tab after switching colorways**
                         try:
                             details_tab = WebDriverWait(driver, 5).until(
                                 EC.element_to_be_clickable((By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"))
@@ -107,24 +96,13 @@ def get_footlocker_deals():
                         except:
                             print(f"⚠️ Could not re-open 'Details' tab after clicking colorway [{color_index + 1}].")
 
-                        # **Extract Foot Locker Supplier SKU from Hidden Input Field**
+                        # **Extract Supplier SKU from Hidden Input**
                         supplier_sku = None
                         try:
                             hidden_input = driver.find_element(By.ID, "ProductDetails_hidden_styleSku")
                             supplier_sku = hidden_input.get_attribute("value").strip()
                         except:
                             print(f"⚠️ Supplier SKU not found in hidden input for product [{index + 1}], colorway [{color_index + 1}].")
-
-                        # **Fallback: Extract from Page Source**
-                        if not supplier_sku:
-                            page_source = driver.page_source
-                            match = re.search(r'Supplier-sku #:\s*<!-- -->\s*([\w\d-]+)', page_source)
-
-                            if match:
-                                supplier_sku = match.group(1)
-                                print(f"✅ Extracted Foot Locker Supplier SKU from Page Source [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
-                            else:
-                                print(f"❌ Supplier SKU not found for product [{index + 1}], colorway [{color_index + 1}].")
 
                         # **Store Results**
                         if colorway_product_number and supplier_sku:
