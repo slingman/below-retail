@@ -13,7 +13,7 @@ def get_footlocker_deals():
     # **Set up WebDriver**
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Remove this for debugging
+    options.add_argument("--headless")  # Remove for debugging
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -101,7 +101,7 @@ def get_footlocker_deals():
                         print(f"✅ Clicked on colorway [{color_index + 1}] for product [{index + 1}].")
                         time.sleep(3)  # Allow page to update
 
-                        # **Check if 'Details' tab is already open before clicking**
+                        # **Ensure 'Details' tab is open**
                         try:
                             details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                             if "open" not in details_panel.get_attribute("class"):
@@ -114,14 +114,17 @@ def get_footlocker_deals():
                         except:
                             print(f"⚠️ Could not ensure 'Details' tab is open for colorway [{color_index + 1}].")
 
+                        # **Ensure Supplier SKU is visible**
+                        driver.execute_script("arguments[0].scrollIntoView();", details_panel)
+                        time.sleep(1)
+
                         # **Extract Supplier SKU from the 'Details' panel**
                         supplier_sku = None
                         try:
-                            details_text = details_panel.text
-
-                            # **Find Supplier SKU using regex**
-                            sku_match = re.search(r"Supplier-sku #:\s*([\w-]+)", details_text)
-                            supplier_sku = sku_match.group(1) if sku_match else None
+                            details_spans = details_panel.find_elements(By.TAG_NAME, "span")
+                            for span in details_spans:
+                                if "Supplier-sku #" in span.text:
+                                    supplier_sku = span.text.split("Supplier-sku #:")[-1].strip()
 
                             if supplier_sku:
                                 print(f"✅ Extracted Supplier SKU for product [{index + 1}], colorway [{color_index + 1}]: {supplier_sku}")
