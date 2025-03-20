@@ -9,15 +9,6 @@ import time
 import re
 import traceback
 
-def get_details_text(driver, xpath):
-    try:
-        element = driver.find_element(By.XPATH, xpath)
-        # Use innerText to get what is visibly rendered
-        return element.get_attribute("innerText")
-    except Exception as e:
-        print(f"⚠️ Error getting details text: {e}")
-        return ""
-
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
@@ -86,13 +77,12 @@ def get_footlocker_deals():
                     product_title = f"Product {index+1}"
                     print(f"⚠️ Could not extract product title, using '{product_title}'")
 
-                # Try to locate the details section regardless of tab structure
+                # Try to locate the details section (click if found)
                 details_selectors = [
-                    "//button[contains(@id, 'ProductDetails-tabs-details-tab')]",  # Standard details tab
-                    "//button[contains(text(), 'Details')]",  # Text-based selector
-                    "//div[contains(@class, 'ProductDetails-description')]"  # Direct access to description
+                    "//button[contains(@id, 'ProductDetails-tabs-details-tab')]",
+                    "//button[contains(text(), 'Details')]",
+                    "//div[contains(@class, 'ProductDetails-description')]"
                 ]
-                
                 details_found = False
                 for selector in details_selectors:
                     try:
@@ -112,13 +102,12 @@ def get_footlocker_deals():
                 # Wait for page to stabilize
                 time.sleep(3)
                 
-                # Get all colorway buttons with improved selector strategy
+                # Get all colorway buttons using multiple selectors
                 colorway_selectors = [
                     (By.CLASS_NAME, "ColorwayStyles-field"),
                     (By.XPATH, "//div[contains(@class, 'ColorwaySelector')]//div[contains(@class, 'ColorwayStyles-field')]"),
                     (By.XPATH, "//div[contains(@class, 'ColorwaySelector')]//img[@alt]")
                 ]
-                
                 colorway_buttons = []
                 for selector_type, selector in colorway_selectors:
                     try:
@@ -132,7 +121,7 @@ def get_footlocker_deals():
                         continue
                 
                 if not colorway_buttons:
-                    print(f"⚠️ No colorways found for product [{index+1}]. Extracting default style only.")
+                    print(f"⚠️ No colorways found for product [{index+1}]. Using default style.")
                     colorway_buttons = [None]
                 else:
                     print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
@@ -146,9 +135,8 @@ def get_footlocker_deals():
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {product_title}...")
-                        
                         if color_button is not None:
-                            # Extract the product number from the colorway's image URL
+                            # Extract product number from the colorway's image URL using multiple patterns
                             try:
                                 colorway_img = color_button.find_element(By.TAG_NAME, "img")
                                 img_src = colorway_img.get_attribute("src")
@@ -174,43 +162,40 @@ def get_footlocker_deals():
                             
                             print(f"🔄 Colorway Product #: {colorway_product_number}")
                             
-                            # Capture current details panel text (innerText)
-                            previous_details_text = get_details_text(driver, details_panel_xpath)
+                            # Click the colorway thumbnail with retry mechanism
+                            max_attempts = 3
+                            for attempt in range(max_attempts):
+                                try:
+                                    driver.execute_script("arguments[0].click();", color_button)
+                                    print(f"✅ Clicked on colorway [{color_index+1}] (Attempt {attempt+1})")
+                                    time.sleep(5)
+                                    break
+                                except Exception as e:
+                                    print(f"⚠️ Click attempt {attempt+1} failed: {e}")
+                                    if attempt == max_attempts - 1:
+                                        raise Exception("Failed to click colorway after multiple attempts")
+                                    time.sleep(2)
                         else:
                             colorway_product_number = "DEFAULT"
                             print("ℹ️ Processing default colorway only")
-                            previous_details_text = ""
                         
-                        # Click the colorway thumbnail with retry mechanism
-                        max_attempts = 3
-                        for attempt in range(max_attempts):
-                            try:
-                                driver.execute_script("arguments[0].click();", color_button)
-                                print(f"✅ Clicked on colorway [{color_index+1}] (Attempt {attempt+1})")
-                                time.sleep(5)
-                                break
-                            except Exception as e:
-                                print(f"⚠️ Click attempt {attempt+1} failed: {e}")
-                                if attempt == max_attempts - 1:
-                                    raise Exception("Failed to click colorway after multiple attempts")
-                                time.sleep(2)
+                        # Wait a fixed amount of time for the details panel to update
+                        time.sleep(5)
                         
-                        # Wait until the details panel updates (its innerText changes and is non-empty)
+                        # Get the updated details panel text using JavaScript
                         try:
-                            WebDriverWait(driver, 15).until(
-                                lambda d: (get_details_text(d, details_panel_xpath) != previous_details_text 
-                                           and get_details_text(d, details_panel_xpath).strip() != "")
+                            details_panel = WebDriverWait(driver, 15).until(
+                                EC.presence_of_element_located((By.XPATH, details_panel_xpath))
                             )
+                            details_text = driver.execute_script("return arguments[0].innerText;", details_panel)
                         except Exception as e:
-                            print("⚠️ Timeout waiting for details panel to update.")
-                            current_text = get_details_text(driver, details_panel_xpath)
-                            print("Previous details panel text:", previous_details_text)
-                            print("Current details panel text:", current_text)
-                            raise e
-                        time.sleep(2)
+                            print(f"⚠️ Error fetching details panel text: {e}")
+                            traceback.print_exc()
+                            continue
                         
-                        # Get updated details panel text and extract supplier SKU using multiple patterns
-                        details_text = get_details_text(driver, details_panel_xpath)
+                        print("Details panel text:", details_text)
+                        
+                        # Attempt to extract the supplier SKU using multiple patterns
                         sku_patterns = [
                             r"Supplier-sku #:\s*(\S+)",
                             r"Supplier[-\s]sku:?\s*(\S+)",
