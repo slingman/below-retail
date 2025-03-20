@@ -105,22 +105,26 @@ def get_footlocker_deals():
                         WebDriverWait(driver, 10).until(
                             lambda d: colorway_product_number in d.find_element(By.XPATH, details_panel_xpath).text
                         )
-                        # Allow extra time for SKU update
+                        # Allow extra time for any asynchronous SKU update
                         time.sleep(2)
 
-                        # Poll for the supplier SKU update (up to 10 seconds)
-                        start_time = time.time()
-                        supplier_sku = None
-                        while time.time() - start_time < 10:
+                        # For the first colorway, accept any extracted SKU; for later ones, require a change.
+                        if color_index == 0:
                             details_text = driver.find_element(By.XPATH, details_panel_xpath).text
                             match = re.search(r"Supplier-sku #:\s*(\S+)", details_text)
-                            if match:
-                                current_sku = match.group(1)
-                                # For first colorway, accept any SKU; for later ones, require a change
-                                if prev_sku is None or current_sku != prev_sku:
-                                    supplier_sku = current_sku
-                                    break
-                            time.sleep(0.5)
+                            supplier_sku = match.group(1) if match else None
+                        else:
+                            start_time = time.time()
+                            supplier_sku = None
+                            while time.time() - start_time < 10:
+                                details_text = driver.find_element(By.XPATH, details_panel_xpath).text
+                                match = re.search(r"Supplier-sku #:\s*(\S+)", details_text)
+                                if match:
+                                    current_sku = match.group(1)
+                                    if current_sku != prev_sku:
+                                        supplier_sku = current_sku
+                                        break
+                                time.sleep(0.5)
 
                         if not supplier_sku:
                             print(f"⚠️ Could not extract updated Supplier SKU for product [{index+1}], colorway [{color_index+1}].")
@@ -136,7 +140,7 @@ def get_footlocker_deals():
                         })
                         print(f"✅ Stored SKU: {supplier_sku} with Product # {colorway_product_number} for product [{index+1}], colorway [{color_index+1}].")
 
-                        prev_sku = supplier_sku  # Update for next iteration
+                        prev_sku = supplier_sku
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index+1}] for product [{index+1}] due to error: {e}")
