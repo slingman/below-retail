@@ -34,7 +34,9 @@ def get_footlocker_deals():
         # Check for cookie consent or popup and handle if present
         try:
             WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'accept') or contains(@id, 'accept')]"))
+                EC.element_to_be_clickable(
+                    (By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'accept') or contains(@id, 'accept')]")
+                )
             ).click()
             print("✅ Clicked on cookie accept button")
             time.sleep(2)
@@ -80,11 +82,10 @@ def get_footlocker_deals():
 
                 # Try to locate the details section regardless of tab structure
                 details_selectors = [
-                    "//button[contains(@id, 'ProductDetails-tabs-details-tab')]",  # Standard details tab
-                    "//button[contains(text(), 'Details')]",  # Text-based selector
-                    "//div[contains(@class, 'ProductDetails-description')]"  # Direct access to description
+                    "//button[contains(@id, 'ProductDetails-tabs-details-tab')]",
+                    "//button[contains(text(), 'Details')]",
+                    "//div[contains(@class, 'ProductDetails-description')]"
                 ]
-                
                 details_found = False
                 for selector in details_selectors:
                     try:
@@ -98,20 +99,17 @@ def get_footlocker_deals():
                         break
                     except Exception:
                         continue
-                
                 if not details_found:
                     print("⚠️ Could not find Details section using standard selectors. Proceeding anyway.")
 
-                # Wait for page to stabilize
                 time.sleep(3)
                 
-                # Get all colorway buttons with improved selector strategy
+                # Get all colorway buttons using improved selector strategy
                 colorway_selectors = [
                     (By.CLASS_NAME, "ColorwayStyles-field"),
                     (By.XPATH, "//div[contains(@class, 'ColorwaySelector')]//div[contains(@class, 'ColorwayStyles-field')]"),
                     (By.XPATH, "//div[contains(@class, 'ColorwaySelector')]//img[@alt]")
                 ]
-                
                 colorway_buttons = []
                 for selector_type, selector in colorway_selectors:
                     try:
@@ -123,54 +121,44 @@ def get_footlocker_deals():
                             break
                     except Exception:
                         continue
-                
                 if not colorway_buttons:
                     print(f"⚠️ No colorways found for product [{index+1}]. Extracting default style only.")
-                    # Create a mock list with None to process default colorway
                     colorway_buttons = [None]
                 else:
                     print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
-                
+
                 # Reset for each product
                 processed_skus = set()
-
-                # Define the details panel XPath (standard)
+                # Define the standard details panel XPath
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 
                 # Loop through each colorway
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {product_title}...")
-                        
-                        # Skip if we only have a default colorway (None)
                         if color_button is not None:
-                            # Extract the product number from the colorway's image URL
+                            # Extract product number from the colorway's image URL
                             try:
                                 colorway_img = color_button.find_element(By.TAG_NAME, "img")
                                 img_src = colorway_img.get_attribute("src")
-                                # Different regex patterns to match product numbers
                                 product_number_patterns = [
-                                    r"/([A-Z0-9]{6,10})\?",  # Standard format
-                                    r"_([A-Z0-9]{6,10})_",   # Alternate format
-                                    r"-([A-Z0-9]{6,10})-"    # Another alternate format
+                                    r"/([A-Z0-9]{6,10})\?", 
+                                    r"_([A-Z0-9]{6,10})_",
+                                    r"-([A-Z0-9]{6,10})-"
                                 ]
-                                
                                 colorway_product_number = None
                                 for pattern in product_number_patterns:
                                     match = re.search(pattern, img_src)
                                     if match:
                                         colorway_product_number = match.group(1)
                                         break
-                                        
                             except Exception as e:
                                 print(f"⚠️ Error extracting product number from image: {e}")
                                 traceback.print_exc()
                                 colorway_product_number = f"UNKNOWN-{color_index+1}"
-                            
                             if not colorway_product_number:
-                                print(f"⚠️ Could not extract Foot Locker Product # for colorway [{color_index+1}]. Using index.")
+                                print(f"⚠️ Could not extract product number for colorway [{color_index+1}], using index.")
                                 colorway_product_number = f"UNKNOWN-{color_index+1}"
-
                             print(f"🔄 Colorway Product #: {colorway_product_number}")
 
                             # Click the colorway thumbnail with retry mechanism
@@ -187,7 +175,6 @@ def get_footlocker_deals():
                                         raise Exception("Failed to click colorway after multiple attempts")
                                     time.sleep(2)
                         else:
-                            # Default colorway case
                             colorway_product_number = "DEFAULT"
                             print("ℹ️ Processing default colorway only")
                         
@@ -196,9 +183,9 @@ def get_footlocker_deals():
                             lambda d: re.search(r"Product #:\s*" + re.escape(colorway_product_number),
                                                   d.find_element(By.XPATH, details_panel_xpath).text) is not None
                         )
-                        time.sleep(2)  # Extra wait for asynchronous update
+                        time.sleep(2)
 
-                        # Get details panel text and extract supplier SKU from it
+                        # Extract details panel text and attempt to find the supplier SKU
                         try:
                             details_text = driver.find_element(By.XPATH, details_panel_xpath).text
                         except Exception as e:
@@ -207,4 +194,71 @@ def get_footlocker_deals():
                             continue
                         
                         sku_patterns = [
-                            r
+                            r"Supplier-sku #:\s*(\S+)",
+                            r"Supplier[-\s]sku:?\s*(\S+)",
+                            r"Item #:\s*(\S+)",
+                            r"Style #:\s*(\S+)",
+                            r"Style:?\s*(\S+)"
+                        ]
+                        supplier_sku = None
+                        for pattern in sku_patterns:
+                            match = re.search(pattern, details_text, re.IGNORECASE)
+                            if match:
+                                supplier_sku = match.group(1).strip()
+                                print(f"✅ Found Supplier SKU using pattern: {pattern}")
+                                break
+                        
+                        if not supplier_sku:
+                            print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}]")
+                            continue
+                        if supplier_sku in processed_skus:
+                            print(f"⚠️ Duplicate SKU detected: {supplier_sku}. Skipping.")
+                            continue
+                        processed_skus.add(supplier_sku)
+                        print(f"✅ Extracted Supplier SKU: {supplier_sku}")
+                        
+                        # Take a screenshot for debugging
+                        screenshot_path = f"footlocker_product_{index+1}_colorway_{color_index+1}.png"
+                        try:
+                            driver.save_screenshot(screenshot_path)
+                            print(f"📷 Saved screenshot to {screenshot_path}")
+                        except Exception as e:
+                            print(f"⚠️ Failed to save screenshot: {e}")
+                        
+                        footlocker_deals.append({
+                            "store": "Foot Locker",
+                            "product_title": product_title,
+                            "product_url": product_url,
+                            "product_number": colorway_product_number,
+                            "supplier_sku": supplier_sku,
+                            "colorway_index": color_index + 1
+                        })
+                        print(f"✅ Stored SKU: {supplier_sku} with Product # {colorway_product_number}")
+                    
+                    except Exception as e:
+                        print(f"⚠️ Error processing colorway [{color_index+1}]: {e}")
+                        traceback.print_exc()
+                        
+                time.sleep(5)
+                
+            except Exception as e:
+                print(f"⚠️ Error processing product [{index+1}]: {e}")
+                traceback.print_exc()
+                
+    except Exception as e:
+        print(f"⚠️ Main process error: {e}")
+        traceback.print_exc()
+    finally:
+        driver.quit()
+    
+    print("\n📊 SUMMARY RESULTS:")
+    print(f"Total products with unique SKUs found: {len(footlocker_deals)}")
+    
+    return footlocker_deals
+
+if __name__ == "__main__":
+    print("🏃 Starting Foot Locker scraper...")
+    deals = get_footlocker_deals()
+    print("\n🏁 Final Foot Locker Deals:")
+    for i, deal in enumerate(deals, 1):
+        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']})")
