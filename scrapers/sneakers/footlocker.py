@@ -43,6 +43,7 @@ def get_footlocker_deals():
             try:
                 print(f"\n🔄 Processing product [{index+1}]...")
 
+                # Re-fetch product cards to avoid stale elements
                 product_cards = WebDriverWait(driver, 15).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
                 )
@@ -50,10 +51,11 @@ def get_footlocker_deals():
                 product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 print(f"✅ Extracted Foot Locker Product URL [{index+1}]: {product_url}")
 
+                # Visit the product page
                 driver.get(product_url)
                 time.sleep(8)
 
-                # Open the 'Details' tab
+                # Open the 'Details' tab (only once per product)
                 details_tab_xpath = "//button[contains(@id, 'ProductDetails-tabs-details-tab')]"
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 try:
@@ -65,8 +67,11 @@ def get_footlocker_deals():
                         driver.execute_script("arguments[0].click();", details_tab)
                         print("✅ Clicked on 'Details' section to ensure visibility for supplier SKU.")
                         time.sleep(2)
-                except Exception:
-                    print(f"⚠️ Could not open 'Details' tab for product [{index+1}]")
+                    else:
+                        print("🔄 'Details' tab is already open.")
+                except Exception as e:
+                    print(f"⚠️ Could not open 'Details' tab for product [{index+1}]: {e}")
+                    continue
 
                 # Get all colorway buttons
                 colorway_buttons = WebDriverWait(driver, 10).until(
@@ -77,59 +82,52 @@ def get_footlocker_deals():
                     colorway_buttons = [None]
                 print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
 
-                prev_sku = None  # Track previous SKU
+                prev_sku = None  # To track the SKU from the previous colorway
 
                 # Loop through each colorway
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
-                        # Extract colorway product number
+                        # Extract the product number from the colorway's image URL
                         colorway_img = color_button.find_element(By.TAG_NAME, "img")
                         img_src = colorway_img.get_attribute("src")
                         product_number_match = re.search(r"/([A-Z0-9]+)\?", img_src)
                         colorway_product_number = product_number_match.group(1) if product_number_match else None
-
-                        print(f"🔄 Extracted Foot Locker Product # [{index+1}], colorway [{color_index+1}]: {colorway_product_number}")
+                        if not colorway_product_number:
+                            print(f"⚠️ Could not extract product number for colorway [{color_index+1}], skipping.")
+                            continue
+                        print(f"🔄 Extracted Product # [{index+1}], colorway [{color_index+1}]: {colorway_product_number}")
 
                         # Click the colorway thumbnail
                         driver.execute_script("arguments[0].click();", color_button)
                         print(f"✅ Clicked on colorway [{color_index+1}] for product [{index+1}].")
 
-                        # Wait for the product number to update
+                        # Wait until the details panel updates to include the expected product number
                         WebDriverWait(driver, 10).until(
                             lambda d: colorway_product_number in d.find_element(By.XPATH, details_panel_xpath).text
                         )
-                        time.sleep(2)  # Allow SKU to update
+                        # Allow extra time for SKU update
+                        time.sleep(2)
 
-                        # Extract the SKU, ensuring it is different from the previous one
-                        retries = 5
+                        # Poll for the supplier SKU update (up to 10 seconds)
+                        start_time = time.time()
                         supplier_sku = None
-                        while retries > 0:
+                        while time.time() - start_time < 10:
                             details_text = driver.find_element(By.XPATH, details_panel_xpath).text
                             match = re.search(r"Supplier-sku #:\s*(\S+)", details_text)
                             if match:
-                                new_sku = match.group(1)
-                                if new_sku != prev_sku:
-                                    supplier_sku = new_sku
+                                current_sku = match.group(1)
+                                # For first colorway, accept any SKU; for later ones, require a change
+                                if prev_sku is None or current_sku != prev_sku:
+                                    supplier_sku = current_sku
                                     break
-                            retries -= 1
-                            time.sleep(2)
+                            time.sleep(0.5)
 
                         if not supplier_sku:
-                            print(f"⚠️ Could not extract unique Supplier SKU for product [{index+1}], colorway [{color_index+1}]. Retrying details panel click.")
-                            driver.execute_script("arguments[0].click();", driver.find_element(By.XPATH, details_tab_xpath))
-                            time.sleep(3)
-                            details_text = driver.find_element(By.XPATH, details_panel_xpath).text
-                            match = re.search(r"Supplier-sku #:\s*(\S+)", details_text)
-                            if match:
-                                supplier_sku = match.group(1)
-
-                        if supplier_sku:
-                            print(f"✅ Extracted Supplier SKU for product [{index+1}], colorway [{color_index+1}]: {supplier_sku}")
-                        else:
-                            print(f"⚠️ Could not extract Supplier SKU for product [{index+1}], colorway [{color_index+1}].")
+                            print(f"⚠️ Could not extract updated Supplier SKU for product [{index+1}], colorway [{color_index+1}].")
                             continue
 
-                        # Store the extracted product number and supplier SKU
+                        print(f"✅ Extracted Supplier SKU for product [{index+1}], colorway [{color_index+1}]: {supplier_sku}")
+
                         footlocker_deals.append({
                             "store": "Foot Locker",
                             "product_url": product_url,
@@ -138,17 +136,17 @@ def get_footlocker_deals():
                         })
                         print(f"✅ Stored SKU: {supplier_sku} with Product # {colorway_product_number} for product [{index+1}], colorway [{color_index+1}].")
 
-                        # Update previous SKU
-                        prev_sku = supplier_sku
+                        prev_sku = supplier_sku  # Update for next iteration
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index+1}] for product [{index+1}] due to error: {e}")
-
                 time.sleep(2)
 
             except Exception as e:
                 print(f"⚠️ Skipping product [{index+1}] due to error: {e}")
 
+    except Exception as e:
+        print(f"⚠️ Main process error: {e}")
     finally:
         driver.quit()
 
