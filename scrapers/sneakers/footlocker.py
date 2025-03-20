@@ -80,6 +80,8 @@ def get_footlocker_deals():
                     colorway_buttons = [None]
                 print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
 
+                prev_supplier_sku = None  # Reset for each product
+
                 # Loop through each colorway
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
@@ -98,23 +100,38 @@ def get_footlocker_deals():
                         driver.execute_script("arguments[0].click();", color_button)
                         print(f"✅ Clicked on colorway [{color_index+1}] for product [{index+1}].")
 
-                        # Wait until the details panel updates with the new product number
-                        WebDriverWait(driver, 10).until(
-                            lambda d: colorway_product_number in d.find_element(By.XPATH, details_panel_xpath).text
-                        )
-                        # Pause briefly to allow the supplier SKU to update
+                        # Wait until the details panel shows the new product number AND an updated supplier SKU
+                        start_time = time.time()
+                        new_supplier_sku = None
+                        while True:
+                            try:
+                                details_panel = driver.find_element(By.XPATH, details_panel_xpath)
+                                details_text = details_panel.text
+                                # Check if the new product number is present
+                                if colorway_product_number in details_text:
+                                    match = re.search(r"Supplier-sku #:\s*(\S+)", details_text)
+                                    if match:
+                                        new_supplier_sku = match.group(1)
+                                        # If we have a previous SKU, require the new SKU to be different
+                                        if prev_supplier_sku is None or new_supplier_sku != prev_supplier_sku:
+                                            break
+                            except Exception:
+                                pass
+                            if time.time() - start_time > 10:
+                                break
+                            time.sleep(0.5)
+
+                        if not new_supplier_sku:
+                            print(f"⚠️ Could not extract updated Supplier SKU for product [{index+1}], colorway [{color_index+1}].")
+                            continue
+
+                        # Re-fetch details panel and scroll it into view
+                        details_panel = driver.find_element(By.XPATH, details_panel_xpath)
+                        driver.execute_script("arguments[0].scrollIntoView();", details_panel)
                         time.sleep(1)
 
-                        # Re-fetch the details panel and extract its text
-                        details_panel = driver.find_element(By.XPATH, details_panel_xpath)
-                        details_text = details_panel.text
-                        match = re.search(r"Supplier-sku #:\s*(\S+)", details_text)
-                        supplier_sku = match.group(1) if match else None
-                        if supplier_sku:
-                            print(f"✅ Extracted Supplier SKU for product [{index+1}], colorway [{color_index+1}]: {supplier_sku}")
-                        else:
-                            print(f"⚠️ Could not extract Supplier SKU for product [{index+1}], colorway [{color_index+1}].")
-                            continue
+                        supplier_sku = new_supplier_sku
+                        print(f"✅ Extracted Supplier SKU for product [{index+1}], colorway [{color_index+1}]: {supplier_sku}")
 
                         # Save the extracted product number and supplier SKU into the results list
                         footlocker_deals.append({
@@ -124,6 +141,9 @@ def get_footlocker_deals():
                             "supplier_sku": supplier_sku
                         })
                         print(f"✅ Stored SKU: {supplier_sku} with Product # {colorway_product_number} for product [{index+1}], colorway [{color_index+1}].")
+
+                        # Update the previous supplier SKU for the next iteration
+                        prev_supplier_sku = supplier_sku
 
                     except Exception as e:
                         print(f"⚠️ Skipping colorway [{color_index+1}] for product [{index+1}] due to error: {e}")
