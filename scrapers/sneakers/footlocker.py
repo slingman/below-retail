@@ -23,19 +23,6 @@ def get_details_text(driver, xpath):
         print(f"⚠️ Error getting details text: {e}")
         return ""
 
-def get_supplier_sku(driver, supplier_xpath):
-    try:
-        # Get the text from the supplier SKU element
-        supplier_text = driver.find_element(By.XPATH, supplier_xpath).text
-        # Expecting text like "Supplier-sku #: FB9660-002"
-        parts = supplier_text.split(":", 1)
-        if len(parts) > 1:
-            return parts[1].strip()
-        return supplier_text.strip()
-    except Exception as e:
-        print(f"⚠️ Error extracting supplier SKU: {e}")
-        return ""
-
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
@@ -51,9 +38,6 @@ def get_footlocker_deals():
     driver.set_window_size(1920, 1080)
 
     footlocker_deals = []
-    # This is the XPath to the details panel and to the supplier SKU span within it.
-    details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
-    supplier_sku_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
 
     try:
         driver.get(search_url)
@@ -69,7 +53,7 @@ def get_footlocker_deals():
         except Exception:
             print("ℹ️ No cookie consent dialog found or couldn't be closed")
         
-        # Fetch product cards
+        # Fetch product cards on the search results page
         product_cards = WebDriverWait(driver, 15).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
@@ -79,16 +63,21 @@ def get_footlocker_deals():
 
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
 
-        # Process first 3 product cards
-        for index in range(min(3, len(product_cards))):
+        # Extract product URLs from the search page (use the first 3)
+        product_urls = []
+        for card in product_cards[:3]:
             try:
-                print(f"\n🔄 Processing product [{index+1}]...")
-                product_cards = WebDriverWait(driver, 15).until(
-                    EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
-                )
-                card = product_cards[index]
-                product_url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
-                print(f"✅ Extracted Foot Locker Product URL [{index+1}]: {product_url}")
+                url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
+                product_urls.append(url)
+            except Exception as e:
+                print(f"⚠️ Error extracting product URL: {e}")
+        
+        print("Extracted product URLs:", product_urls)
+
+        # Process each product URL
+        for idx, product_url in enumerate(product_urls, start=1):
+            try:
+                print(f"\n🔄 Processing product [{idx}]...")
                 driver.get(product_url)
                 time.sleep(8)
 
@@ -99,10 +88,11 @@ def get_footlocker_deals():
                     ).text
                     print(f"📝 Product Title: {product_title}")
                 except Exception:
-                    product_title = f"Product {index+1}"
+                    product_title = f"Product {idx}"
                     print(f"⚠️ Could not extract product title, using '{product_title}'")
 
-                # Open details section
+                # Open details section if not already open
+                details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 try:
                     details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                     if "open" not in details_panel.get_attribute("class"):
@@ -118,7 +108,7 @@ def get_footlocker_deals():
                 except Exception:
                     print("⚠️ Details panel not found; proceeding anyway")
                 time.sleep(3)
-                
+
                 # Get colorway buttons using multiple selectors
                 colorway_selectors = [
                     (By.CLASS_NAME, "ColorwayStyles-field"),
@@ -137,14 +127,12 @@ def get_footlocker_deals():
                     except Exception:
                         continue
                 if not colorway_buttons:
-                    print(f"⚠️ No colorways found for product [{index+1}]. Using default style.")
+                    print(f"⚠️ No colorways found for product [{idx}]. Using default style.")
                     colorway_buttons = [None]
                 else:
-                    print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
+                    print(f"🎨 Found {len(colorway_buttons)} colorways for product [{idx}].")
                 
-                previous_supplier_sku = None  # For tracking changes
-                
-                # Process each colorway
+                # Process each colorway (store all SKUs, even if duplicate)
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {product_title}...")
@@ -173,7 +161,7 @@ def get_footlocker_deals():
                                 colorway_product_number = f"UNKNOWN-{color_index+1}"
                             print(f"🔄 Colorway Product #: {colorway_product_number}")
                             
-                            # Click the colorway thumbnail using ActionChains
+                            # Click the colorway thumbnail using ActionChains (or fallback to JavaScript)
                             try:
                                 actions = ActionChains(driver)
                                 actions.move_to_element(color_button).click().perform()
@@ -183,13 +171,17 @@ def get_footlocker_deals():
                                 driver.execute_script("arguments[0].click();", color_button)
                                 print(f"✅ Clicked on colorway [{color_index+1}] using JavaScript fallback")
                             
-                            # Wait for the details panel to update; increase delay to 15 seconds
+                            # Wait for a fixed 15 seconds to allow the details panel to update
                             time.sleep(15)
                         else:
                             colorway_product_number = "DEFAULT"
                             print("ℹ️ Processing default colorway only")
                         
-                        # Now, specifically get the supplier SKU text from the second span within the details panel
+                        # Get updated details panel text
+                        details_text = get_details_text(driver, details_panel_xpath)
+                        print("Details panel text:", details_text)
+                        
+                        # Extract supplier SKU from the second span inside the details panel
                         try:
                             supplier_sku_text = driver.find_element(By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']/span[2]").text
                             supplier_sku = supplier_sku_text.split(":", 1)[-1].strip()
@@ -202,11 +194,8 @@ def get_footlocker_deals():
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}]")
                             continue
                         
-                        # Optionally, if you want to force a re-read if the supplier SKU hasn't changed,
-                        # you could compare to previous_supplier_sku and wait longer, but in this version we simply read it.
-                        previous_supplier_sku = supplier_sku
-                        
-                        screenshot_path = f"footlocker_product_{index+1}_colorway_{color_index+1}.png"
+                        # Save screenshot and store the result
+                        screenshot_path = f"footlocker_product_{idx}_colorway_{color_index+1}.png"
                         try:
                             driver.save_screenshot(screenshot_path)
                             print(f"📷 Saved screenshot to {screenshot_path}")
@@ -230,7 +219,7 @@ def get_footlocker_deals():
                 time.sleep(5)
                 
             except Exception as e:
-                print(f"⚠️ Error processing product [{index+1}]: {e}")
+                print(f"⚠️ Error processing product [{idx}]: {e}")
                 traceback.print_exc()
                 
     except Exception as e:
