@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 import time
 import re
 import traceback
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 def get_details_text(driver, xpath):
     try:
@@ -85,7 +86,7 @@ def get_footlocker_deals():
                     product_title = f"Product {index+1}"
                     print(f"⚠️ Could not extract product title, using '{product_title}'")
 
-                # Open the details section
+                # Open details section if not already open
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 try:
                     details_panel = driver.find_element(By.XPATH, details_panel_xpath)
@@ -126,7 +127,7 @@ def get_footlocker_deals():
                 else:
                     print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
                 
-                # Loop through each colorway (no duplicate check)
+                # Process each colorway
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {product_title}...")
@@ -162,22 +163,19 @@ def get_footlocker_deals():
                             print("ℹ️ Processing default colorway only")
                             previous_details_text = ""
                         
-                        # Click the colorway thumbnail with retry
-                        max_attempts = 3
-                        for attempt in range(max_attempts):
-                            try:
-                                driver.execute_script("arguments[0].click();", color_button)
-                                print(f"✅ Clicked on colorway [{color_index+1}] (Attempt {attempt+1})")
-                                # Wait 15 seconds for the details panel to update
-                                time.sleep(15)
-                                break
-                            except Exception as e:
-                                print(f"⚠️ Click attempt {attempt+1} failed: {e}")
-                                if attempt == max_attempts - 1:
-                                    raise Exception("Failed to click colorway after multiple attempts")
-                                time.sleep(2)
+                        # Use ActionChains to click the colorway thumbnail
+                        try:
+                            actions = ActionChains(driver)
+                            actions.move_to_element(color_button).click().perform()
+                            print(f"✅ Clicked on colorway [{color_index+1}] using ActionChains")
+                        except Exception as e:
+                            print(f"⚠️ ActionChains click failed: {e}")
+                            driver.execute_script("arguments[0].click();", color_button)
+                            print(f"✅ Clicked on colorway [{color_index+1}] using JavaScript fallback")
+                        # Wait 15 seconds to allow the details panel to update
+                        time.sleep(15)
                         
-                        # Re-read the details panel text
+                        # Re-read details panel text
                         details_text = get_details_text(driver, details_panel_xpath)
                         print("Details panel text:", details_text)
                         
