@@ -32,6 +32,24 @@ def extract_product_number(text):
     m = re.search(r"Product #:\s*(\S+)", text)
     return m.group(1) if m else text
 
+def extract_supplier_sku(driver):
+    """
+    Searches all span elements in the details panel for text containing "Supplier-sku #:" 
+    and returns the extracted SKU.
+    """
+    try:
+        spans = driver.find_elements(By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']//span")
+        for span in spans:
+            txt = span.text.strip()
+            if "Supplier-sku" in txt:
+                m = re.search(r"Supplier-sku #:\s*(\S+)", txt)
+                if m:
+                    return m.group(1)
+        return ""
+    except Exception as e:
+        print(f"⚠️ Error extracting supplier SKU: {e}")
+        return ""
+
 def open_details_tab(driver, details_panel_xpath):
     """Ensures the Details panel is open; if not, clicks the Details tab."""
     try:
@@ -56,7 +74,7 @@ def get_footlocker_deals():
     # XPaths for details panel elements.
     details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
     product_num_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
-    supplier_sku_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
+    # We'll now use extract_supplier_sku() instead of a fixed XPath.
     
     # Price selectors using CSS (based on provided HTML snippet)
     sale_price_css = "div.ProductPrice span.ProductPrice-final"
@@ -112,10 +130,9 @@ def get_footlocker_deals():
                 driver.get(prod_url)
                 time.sleep(8)
                 
-                # Extract Product Title with fallback: try h1.product-title, then .ProductName-primary.
                 try:
                     product_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
-                except Exception as e:
+                except Exception:
                     try:
                         product_title = driver.find_element(By.CLASS_NAME, "ProductName-primary").text.strip()
                     except Exception as e:
@@ -194,8 +211,8 @@ def get_footlocker_deals():
                         else:
                             print("Base product remains; using current page for variant")
                         
-                        supplier_sku = get_element_text(driver, supplier_sku_xpath, use_css=False)
-                        print("Extracted Supplier SKU from span:", supplier_sku)
+                        supplier_sku = extract_supplier_sku(driver)
+                        print("Extracted Supplier SKU from details panel:", supplier_sku)
                         if not supplier_sku:
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}].")
                             continue
@@ -225,7 +242,7 @@ def get_footlocker_deals():
                         print("Extracted Regular Price:", regular_price)
                         print("Extracted Discount Percent:", discount_percent)
                         
-                        # Try extracting the product title from the variant page using a fallback
+                        # Attempt to extract product title from variant page as fallback.
                         try:
                             fl_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
                         except:
