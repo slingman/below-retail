@@ -10,7 +10,7 @@ def get_nike_deals():
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in headless mode for efficiency
+    options.add_argument("--headless")  # Run headless for efficiency
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -25,7 +25,7 @@ def get_nike_deals():
 
         for card in product_cards:
             try:
-                # Extract Product Name with a fallback
+                # Extract Product Name (with fallback)
                 try:
                     product_name = card.find_element(By.CLASS_NAME, "product-card__title").text
                 except:
@@ -37,7 +37,7 @@ def get_nike_deals():
                 except:
                     product_url = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__link-overlay']").get_attribute("href")
 
-                # Extract Style ID from URL (e.g., FZ5808-400)
+                # Extract Style ID from URL (last part, e.g. FZ5808-400)
                 style_id = product_url.split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
@@ -47,7 +47,13 @@ def get_nike_deals():
                 except:
                     image_url = card.find_element(By.CSS_SELECTOR, "img.product-card__hero-image").get_attribute("src")
 
-                # Extract Prices using new data-testid attributes.
+                # Extract Price Information using the new structure
+                # The price container is expected to be like:
+                # <div id="price-container" class="...">
+                #   <span data-testid="currentPrice-container">$91.97</span>
+                #   <span data-testid="initialPrice-container">$140</span>
+                #   <span data-testid="OfferPercentage">34% off</span>
+                # </div>
                 try:
                     sale_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
                     sale_price = sale_price_text.replace("$", "").strip()
@@ -55,10 +61,11 @@ def get_nike_deals():
                     sale_price = None
 
                 try:
-                    original_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
-                    original_price = original_price_text.replace("$", "").strip()
+                    regular_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
+                    regular_price = regular_price_text.replace("$", "").strip()
                 except Exception as e:
-                    original_price = sale_price  # Fallback if no original price is found
+                    # If the initial price isn't found, assume the sale price is the only price.
+                    regular_price = sale_price
 
                 try:
                     discount_percent = card.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
@@ -68,11 +75,11 @@ def get_nike_deals():
                 # Convert price strings to floats if possible.
                 try:
                     sale_price = float(sale_price) if sale_price else None
-                    original_price = float(original_price) if original_price else None
+                    regular_price = float(regular_price) if regular_price else None
                 except:
-                    sale_price, original_price = None, None
+                    sale_price, regular_price = None, None
 
-                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {original_price} | Style ID: {style_id}")
+                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
 
                 deals.append({
                     "store": "Nike",
@@ -80,7 +87,7 @@ def get_nike_deals():
                     "product_url": product_url,
                     "image_url": image_url,
                     "sale_price": sale_price,
-                    "regular_price": original_price,
+                    "regular_price": regular_price,
                     "discount_percent": discount_percent,
                     "style_id": style_id,
                 })
