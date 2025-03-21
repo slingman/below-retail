@@ -5,7 +5,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 
 def get_nike_deals():
-    url = "https://www.nike.com/w?q=air+max+1"
+    search_url = "https://www.nike.com/w?q=air+max+1"
 
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
@@ -16,76 +16,73 @@ def get_nike_deals():
     options.add_argument("--disable-dev-shm-usage")
     driver = webdriver.Chrome(service=service, options=options)
 
+    deals = []
+
     try:
-        driver.get(url)
-        time.sleep(5)  # Allow time for page to load
+        driver.get(search_url)
+        time.sleep(5)  # Allow search results page to load
 
-        deals = []
+        # Get product cards from the search results page
         product_cards = driver.find_elements(By.CLASS_NAME, "product-card")
+        if not product_cards:
+            print("⚠️ No products found on Nike search page.")
+            return deals
 
+        # Process each product card from search results
         for card in product_cards:
             try:
-                # Extract Product Name (with fallback)
-                try:
-                    product_name = card.find_element(By.CLASS_NAME, "product-card__title").text
-                except:
-                    product_name = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__title']").text
-
-                # Extract Product URL
+                # Extract product URL
                 try:
                     product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
                 except:
                     product_url = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__link-overlay']").get_attribute("href")
-
-                # Extract Style ID from URL (last part, e.g. FZ5808-400)
+                
+                # Extract Style ID from URL (assume last segment is style ID)
                 style_id = product_url.split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
-                # Extract Image URL
-                try:
-                    image_url = card.find_element(By.CLASS_NAME, "product-card__hero-image").get_attribute("src")
-                except:
-                    image_url = card.find_element(By.CSS_SELECTOR, "img.product-card__hero-image").get_attribute("src")
+                # Navigate to product detail page
+                driver.get(product_url)
+                time.sleep(5)  # Allow detail page to load
 
-                # Extract Price Information using the new structure
-                # The price container is expected to be like:
-                # <div id="price-container" class="...">
-                #   <span data-testid="currentPrice-container">$91.97</span>
-                #   <span data-testid="initialPrice-container">$140</span>
-                #   <span data-testid="OfferPercentage">34% off</span>
-                # </div>
+                # Extract Product Title from detail page
                 try:
-                    sale_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
+                    product_title = driver.find_element(By.CSS_SELECTOR, "h1[data-testid='product_title']").text.strip()
+                except Exception as e:
+                    product_title = "Unknown Product Title"
+                    print(f"⚠️ Could not extract product title: {e}")
+
+                # Extract Price Information from detail page
+                try:
+                    sale_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
                     sale_price = sale_price_text.replace("$", "").strip()
                 except Exception as e:
                     sale_price = None
 
                 try:
-                    regular_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
+                    regular_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
                     regular_price = regular_price_text.replace("$", "").strip()
                 except Exception as e:
-                    # If the initial price isn't found, assume the sale price is the only price.
-                    regular_price = sale_price
+                    regular_price = sale_price  # Fallback if not found
 
                 try:
-                    discount_percent = card.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
+                    discount_percent = driver.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
                 except Exception as e:
                     discount_percent = None
 
-                # Convert price strings to floats if possible.
+                # Convert prices to float if possible
                 try:
                     sale_price = float(sale_price) if sale_price else None
                     regular_price = float(regular_price) if regular_price else None
                 except:
                     sale_price, regular_price = None, None
 
-                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
+                print(f"🟢 Nike Product Found: {product_title} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
 
                 deals.append({
                     "store": "Nike",
-                    "product_name": product_name,
+                    "product_name": product_title,
                     "product_url": product_url,
-                    "image_url": image_url,
                     "sale_price": sale_price,
                     "regular_price": regular_price,
                     "discount_percent": discount_percent,
@@ -101,6 +98,6 @@ def get_nike_deals():
         driver.quit()
 
 if __name__ == "__main__":
-    deals = get_nike_deals()
-    for deal in deals:
+    nike_deals = get_nike_deals()
+    for deal in nike_deals:
         print(deal)
