@@ -85,7 +85,7 @@ def get_footlocker_deals():
                     product_title = f"Product {index+1}"
                     print(f"⚠️ Could not extract product title, using '{product_title}'")
 
-                # Open the details section (if not already open)
+                # Open the details section
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 try:
                     details_panel = driver.find_element(By.XPATH, details_panel_xpath)
@@ -126,9 +126,7 @@ def get_footlocker_deals():
                 else:
                     print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
                 
-                processed_skus = set()
-                
-                # Loop through each colorway
+                # Loop through each colorway (no duplicate check)
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {product_title}...")
@@ -157,7 +155,7 @@ def get_footlocker_deals():
                                 colorway_product_number = f"UNKNOWN-{color_index+1}"
                             print(f"🔄 Colorway Product #: {colorway_product_number}")
                             
-                            # Capture current details panel text before clicking
+                            # Capture current details text before clicking
                             previous_details_text = get_details_text(driver, details_panel_xpath)
                         else:
                             colorway_product_number = "DEFAULT"
@@ -170,8 +168,8 @@ def get_footlocker_deals():
                             try:
                                 driver.execute_script("arguments[0].click();", color_button)
                                 print(f"✅ Clicked on colorway [{color_index+1}] (Attempt {attempt+1})")
-                                # Increase wait time after clicking to 10 seconds
-                                time.sleep(10)
+                                # Wait 15 seconds for the details panel to update
+                                time.sleep(15)
                                 break
                             except Exception as e:
                                 print(f"⚠️ Click attempt {attempt+1} failed: {e}")
@@ -179,7 +177,7 @@ def get_footlocker_deals():
                                     raise Exception("Failed to click colorway after multiple attempts")
                                 time.sleep(2)
                         
-                        # Get updated details panel text using our helper function
+                        # Re-read the details panel text
                         details_text = get_details_text(driver, details_panel_xpath)
                         print("Details panel text:", details_text)
                         
@@ -202,11 +200,6 @@ def get_footlocker_deals():
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}]")
                             continue
                         
-                        if supplier_sku in processed_skus:
-                            print(f"⚠️ Duplicate SKU detected: {supplier_sku}. Skipping.")
-                            continue
-                        
-                        processed_skus.add(supplier_sku)
                         print(f"✅ Extracted Supplier SKU: {supplier_sku}")
                         
                         screenshot_path = f"footlocker_product_{index+1}_colorway_{color_index+1}.png"
