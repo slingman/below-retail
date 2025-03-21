@@ -5,11 +5,9 @@ from scrapers.sneakers.footlocker import get_footlocker_deals
 
 def format_deal(deal, source):
     """
-    Returns a formatted string in the following format:
-    
+    Returns a formatted string:
     Product Title | Identifier | Sale Price | Regular Price | Discount % | Product URL
-    
-    For Nike, identifier is the style_id; for Foot Locker, it is the supplier_sku.
+    For Nike, identifier is the style_id; for Foot Locker, it's the supplier_sku.
     """
     if not deal:
         return "No deal found."
@@ -28,7 +26,7 @@ def format_deal(deal, source):
 
 def effective_price(product):
     """
-    Returns the effective price: sale price if available; otherwise, regular price.
+    Returns the effective price: sale price if available, else regular price.
     """
     if product is None:
         return None
@@ -36,9 +34,8 @@ def effective_price(product):
 
 def match_and_compare(nike_deals, footlocker_deals, target_style_id):
     """
-    Matches a Nike product with the given target style ID with a Foot Locker product whose supplier_sku
-    matches (after normalizing both to uppercase). Then computes the effective price for each and determines
-    which store is cheaper (and by how much).
+    Matches a Nike product (by style_id) with a Foot Locker product (by supplier_sku).
+    Returns the matching Nike product, Foot Locker product, the cheaper store, and price difference.
     """
     target = target_style_id.upper().strip()
     nike_product = None
@@ -79,37 +76,34 @@ def main():
     print(f"Fetched {len(nike_deals)} Nike deals.")
 
     print("\nFetching Foot Locker deals...")
-    footlocker_deals = get_footlocker_deals()  # Ensure this scrapes at least 4 products
+    footlocker_deals = get_footlocker_deals()
     print(f"Fetched {len(footlocker_deals)} Foot Locker deals.")
 
-    # Print all Nike deals in a consistent format.
     print("\n===== Nike Deals =====")
     for deal in nike_deals:
         print(format_deal(deal, "Nike"))
     
-    # Print all Foot Locker deals in a consistent format.
     print("\n===== Foot Locker Deals =====")
     for deal in footlocker_deals:
         print(format_deal(deal, "Foot Locker"))
     
-    # Compare a specific product by style ID.
-    TARGET_STYLE_ID = "FZ5808-400"  # Update as needed
-    nike_product, fl_product, cheaper_store, price_diff = match_and_compare(nike_deals, footlocker_deals, TARGET_STYLE_ID)
+    TARGET_STYLE_ID = "FZ5808-400"
+    nike_prod, fl_prod, cheaper_store, price_diff = match_and_compare(nike_deals, footlocker_deals, TARGET_STYLE_ID)
 
     print("\n==================== Matched Product Comparison ====================")
     print(f"Target Style ID: {TARGET_STYLE_ID}\n")
     print("Nike Deal:")
-    print(format_deal(nike_product, "Nike"))
+    print(format_deal(nike_prod, "Nike"))
     print("\nFoot Locker Deal:")
-    print(format_deal(fl_product, "Foot Locker"))
+    print(format_deal(fl_prod, "Foot Locker"))
     print("\nCheaper Store:", cheaper_store)
     if price_diff is not None:
         print("Price Difference: $", price_diff)
     print("====================================================================\n")
 
     result = {
-        "nike": nike_product if nike_product else None,
-        "footlocker": fl_product if fl_product else None,
+        "nike": nike_prod if nike_prod else None,
+        "footlocker": fl_prod if fl_prod else None,
         "cheaper_store": cheaper_store,
         "price_difference": price_diff,
     }
