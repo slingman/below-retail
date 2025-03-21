@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_element_text(driver, xpath):
+    """Scroll to the element and return its text (or innerText if .text is empty)."""
     try:
         elem = driver.find_element(By.XPATH, xpath)
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
@@ -24,16 +25,12 @@ def get_element_text(driver, xpath):
         return ""
 
 def extract_product_number(text):
-    """
-    Extracts the product number from text like "Product #: B9660002".
-    """
+    """Extracts the product number from text like 'Product #: B9660002'."""
     m = re.search(r"Product #:\s*(\S+)", text)
     return m.group(1) if m else text
 
 def open_details_tab(driver, details_panel_xpath):
-    """
-    Ensures the Details panel is open. If not, clicks the Details tab.
-    """
+    """Ensures the Details panel is open; if not, clicks the Details tab."""
     try:
         panel = driver.find_element(By.XPATH, details_panel_xpath)
         if "open" not in panel.get_attribute("class"):
@@ -51,13 +48,17 @@ def open_details_tab(driver, details_panel_xpath):
 
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
-    # Use a positional placeholder for the variant URL.
+    # Variant URL format uses a positional placeholder.
     variant_url_format = "https://www.footlocker.com/product/~/{0}.html"
 
     # XPaths for details panel elements.
     details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
     product_num_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
     supplier_sku_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
+    # XPaths for prices.
+    sale_price_xpath = "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-final')]"
+    regular_price_xpath = "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-original')]"
+    discount_percent_xpath = "//div[contains(@class, 'ProductPrice-percent')]"
 
     # Set up WebDriver.
     service = Service(ChromeDriverManager().install())
@@ -86,7 +87,7 @@ def get_footlocker_deals():
         except Exception:
             print("ℹ️ No cookie consent dialog found or couldn't be closed")
 
-        # Get product cards from the search page.
+        # Get product cards.
         product_cards = WebDriverWait(driver, 15).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
@@ -192,24 +193,32 @@ def get_footlocker_deals():
                         updated_prod = extract_product_number(updated_text)
                         print("Updated Product Number:", updated_prod)
 
-                        # If the updated product number differs from the base, navigate to the variant URL.
+                        # If updated product number differs, navigate to variant URL.
                         if updated_prod and updated_prod != base_prod:
                             variant_url = variant_url_format.format(updated_prod)
                             print("Navigating to variant URL:", variant_url)
                             driver.get(variant_url)
                             time.sleep(8)
-                            # Ensure the details tab is open on the variant page.
+                            # Ensure the Details tab is open on variant page.
                             open_details_tab(driver, details_panel_xpath)
                             time.sleep(3)
                         else:
                             print("Base product remains; using current page for variant")
 
-                        # Extract the supplier SKU from the second span in the details panel.
+                        # Extract the supplier SKU from the second span.
                         supplier_sku = get_element_text(driver, supplier_sku_xpath)
                         print("Extracted Supplier SKU from span:", supplier_sku)
                         if not supplier_sku:
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}].")
                             continue
+
+                        # Extract price information.
+                        sale_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-final')]")
+                        regular_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-original')]")
+                        discount_percent = get_element_text(driver, "//div[contains(@class, 'ProductPrice-percent')]")
+                        print("Extracted Sale Price:", sale_price)
+                        print("Extracted Regular Price:", regular_price)
+                        print("Extracted Discount Percent:", discount_percent)
 
                         deals.append({
                             "store": "Foot Locker",
@@ -217,6 +226,9 @@ def get_footlocker_deals():
                             "product_url": prod_url,
                             "product_number": updated_prod if updated_prod else base_prod,
                             "supplier_sku": supplier_sku,
+                            "sale_price": sale_price,
+                            "regular_price": regular_price,
+                            "discount_percent": discount_percent,
                             "colorway_index": color_index+1
                         })
                         print("✅ Stored SKU:", supplier_sku, "with Product #", updated_prod if updated_prod else base_prod)
@@ -247,4 +259,4 @@ if __name__ == "__main__":
     deals = get_footlocker_deals()
     print("\nFinal Foot Locker Deals:")
     for i, deal in enumerate(deals, 1):
-        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']})")
+        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']}, Sale Price: {deal['sale_price']}, Regular Price: {deal['regular_price']}, Discount: {deal['discount_percent']})")
