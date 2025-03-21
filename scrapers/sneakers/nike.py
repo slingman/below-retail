@@ -37,7 +37,7 @@ def get_nike_deals():
                 except:
                     product_url = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__link-overlay']").get_attribute("href")
 
-                # Extract Style ID from URL (last part, e.g., FZ5808-400)
+                # Extract Style ID from URL (e.g., FZ5808-400)
                 style_id = product_url.split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
@@ -55,24 +55,24 @@ def get_nike_deals():
                     sale_price = None
 
                 try:
-                    regular_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
-                    regular_price = regular_price_text.replace("$", "").strip()
+                    original_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
+                    original_price = original_price_text.replace("$", "").strip()
                 except Exception as e:
-                    regular_price = sale_price  # If not found, assume no discount
+                    original_price = sale_price  # Fallback if no original price is found
 
                 try:
                     discount_percent = card.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
                 except Exception as e:
                     discount_percent = None
 
-                # Convert price strings to floats if possible
+                # Convert price strings to floats if possible.
                 try:
                     sale_price = float(sale_price) if sale_price else None
-                    regular_price = float(regular_price) if regular_price else None
+                    original_price = float(original_price) if original_price else None
                 except:
-                    sale_price, regular_price = None, None
+                    sale_price, original_price = None, None
 
-                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
+                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {original_price} | Style ID: {style_id}")
 
                 deals.append({
                     "store": "Nike",
@@ -80,7 +80,7 @@ def get_nike_deals():
                     "product_url": product_url,
                     "image_url": image_url,
                     "sale_price": sale_price,
-                    "regular_price": regular_price,
+                    "regular_price": original_price,
                     "discount_percent": discount_percent,
                     "style_id": style_id,
                 })
