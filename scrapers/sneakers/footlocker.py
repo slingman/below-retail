@@ -12,7 +12,6 @@ import traceback
 def get_details_text(driver, xpath):
     try:
         element = driver.find_element(By.XPATH, xpath)
-        # Scroll the details panel into view
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
         time.sleep(1)
         text = element.text
@@ -33,7 +32,6 @@ def get_footlocker_deals():
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    # Add user agent to appear more like a regular browser
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_window_size(1920, 1080)
@@ -47,9 +45,7 @@ def get_footlocker_deals():
         # Handle cookie consent if present
         try:
             WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'accept') or contains(@id, 'accept')]")
-                )
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'accept') or contains(@id, 'accept')]"))
             ).click()
             print("✅ Clicked on cookie accept button")
             time.sleep(2)
@@ -89,7 +85,7 @@ def get_footlocker_deals():
                     product_title = f"Product {index+1}"
                     print(f"⚠️ Could not extract product title, using '{product_title}'")
 
-                # Attempt to open the details section (if not already open)
+                # Open the details section (if not already open)
                 details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
                 try:
                     details_panel = driver.find_element(By.XPATH, details_panel_xpath)
@@ -131,6 +127,8 @@ def get_footlocker_deals():
                     print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
                 
                 processed_skus = set()
+                
+                # Loop through each colorway
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {product_title}...")
@@ -159,27 +157,29 @@ def get_footlocker_deals():
                                 colorway_product_number = f"UNKNOWN-{color_index+1}"
                             print(f"🔄 Colorway Product #: {colorway_product_number}")
                             
-                            # Click the colorway thumbnail with a retry mechanism
-                            max_attempts = 3
-                            for attempt in range(max_attempts):
-                                try:
-                                    driver.execute_script("arguments[0].click();", color_button)
-                                    print(f"✅ Clicked on colorway [{color_index+1}] (Attempt {attempt+1})")
-                                    time.sleep(5)
-                                    break
-                                except Exception as e:
-                                    print(f"⚠️ Click attempt {attempt+1} failed: {e}")
-                                    if attempt == max_attempts - 1:
-                                        raise Exception("Failed to click colorway after multiple attempts")
-                                    time.sleep(2)
+                            # Capture current details panel text before clicking
+                            previous_details_text = get_details_text(driver, details_panel_xpath)
                         else:
                             colorway_product_number = "DEFAULT"
                             print("ℹ️ Processing default colorway only")
+                            previous_details_text = ""
                         
-                        # Fixed wait for details panel to update
-                        time.sleep(5)
+                        # Click the colorway thumbnail with retry
+                        max_attempts = 3
+                        for attempt in range(max_attempts):
+                            try:
+                                driver.execute_script("arguments[0].click();", color_button)
+                                print(f"✅ Clicked on colorway [{color_index+1}] (Attempt {attempt+1})")
+                                # Increase wait time after clicking to 10 seconds
+                                time.sleep(10)
+                                break
+                            except Exception as e:
+                                print(f"⚠️ Click attempt {attempt+1} failed: {e}")
+                                if attempt == max_attempts - 1:
+                                    raise Exception("Failed to click colorway after multiple attempts")
+                                time.sleep(2)
                         
-                        # Get the updated details panel text using our helper
+                        # Get updated details panel text using our helper function
                         details_text = get_details_text(driver, details_panel_xpath)
                         print("Details panel text:", details_text)
                         
