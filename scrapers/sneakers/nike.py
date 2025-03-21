@@ -16,16 +16,16 @@ def get_nike_deals():
     options.add_argument("--disable-dev-shm-usage")
     driver = webdriver.Chrome(service=service, options=options)
 
+    deals = []
     try:
         driver.get(url)
         time.sleep(5)  # Allow search results to load
 
-        deals = []
+        # Extract product cards and build product URLs list
         product_cards = driver.find_elements(By.CLASS_NAME, "product-card")
         product_urls = []
         for card in product_cards:
             try:
-                # Extract product URL from the card
                 try:
                     product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
                 except:
@@ -34,19 +34,13 @@ def get_nike_deals():
             except Exception as e:
                 print(f"⚠️ Error extracting product URL: {e}")
         print("Extracted product URLs:", product_urls)
-
-        # Process each product detail page
+        
         for prod_url in product_urls:
-            # Skip URLs that contain "/launch/" (announcement pages)
-            if "/launch/" in prod_url:
-                print(f"⚠️ Skipping product with launch URL: {prod_url}")
-                continue
-
             try:
                 driver.get(prod_url)
                 time.sleep(5)  # Allow detail page to load
 
-                # Extract Product Title: try by id then fallback to data-testid
+                # Extract Product Title: try using the ID then fallback to data-testid.
                 try:
                     product_title = driver.find_element(By.CSS_SELECTOR, "h1#pdp_product_title").text.strip()
                 except Exception as e:
@@ -56,11 +50,11 @@ def get_nike_deals():
                         product_title = "Unknown Product Title"
                         print(f"⚠️ Could not extract product title: {e}")
 
-                # Extract Style ID from URL (assumes the last segment is the style ID)
+                # Derive Style ID from URL (last segment)
                 style_id = prod_url.split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
-                # Extract Price Information using the live site selectors
+                # Extract Price Information using data-testid attributes.
                 try:
                     sale_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
                     sale_price = sale_price_text.replace("$", "").strip()
@@ -71,14 +65,13 @@ def get_nike_deals():
                     regular_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
                     regular_price = regular_price_text.replace("$", "").strip()
                 except Exception as e:
-                    regular_price = sale_price  # fallback if not found
+                    regular_price = sale_price
 
                 try:
                     discount_percent = driver.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
                 except Exception as e:
                     discount_percent = None
 
-                # Convert price strings to floats if possible
                 try:
                     sale_price = float(sale_price) if sale_price else None
                     regular_price = float(regular_price) if regular_price else None
