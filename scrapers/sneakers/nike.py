@@ -21,7 +21,7 @@ def get_nike_deals():
         driver.get(url)
         time.sleep(5)  # Allow search results to load
 
-        # Extract product cards and build product URLs list
+        # Extract product cards and build a list of product URLs
         product_cards = driver.find_elements(By.CLASS_NAME, "product-card")
         product_urls = []
         for card in product_cards:
@@ -35,12 +35,13 @@ def get_nike_deals():
                 print(f"⚠️ Error extracting product URL: {e}")
         print("Extracted product URLs:", product_urls)
         
+        # Process each product detail page
         for prod_url in product_urls:
             try:
                 driver.get(prod_url)
                 time.sleep(5)  # Allow detail page to load
 
-                # Extract Product Title: try using the ID then fallback to data-testid.
+                # Extract Product Title (try by ID, then fallback to data-testid)
                 try:
                     product_title = driver.find_element(By.CSS_SELECTOR, "h1#pdp_product_title").text.strip()
                 except Exception as e:
@@ -50,11 +51,11 @@ def get_nike_deals():
                         product_title = "Unknown Product Title"
                         print(f"⚠️ Could not extract product title: {e}")
 
-                # Derive Style ID from URL (last segment)
+                # Derive Style ID from URL (assumes last segment is the style ID)
                 style_id = prod_url.split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
-                # Extract Price Information using data-testid attributes.
+                # Extract price information using data-testid attributes
                 try:
                     sale_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
                     sale_price = sale_price_text.replace("$", "").strip()
