@@ -10,7 +10,7 @@ def get_nike_deals():
     # Set up Selenium WebDriver
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in headless mode for efficiency
+    options.add_argument("--headless")  # Run headless for efficiency
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -18,15 +18,14 @@ def get_nike_deals():
 
     try:
         driver.get(url)
-        time.sleep(5)  # Allow time for page to load
+        time.sleep(5)  # Allow search results to load
 
         deals = []
-        # First, extract all product URLs from the search results
         product_cards = driver.find_elements(By.CLASS_NAME, "product-card")
         product_urls = []
         for card in product_cards:
             try:
-                # Using CSS selectors as fallback
+                # Extract product URL from the card
                 try:
                     product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
                 except:
@@ -36,53 +35,56 @@ def get_nike_deals():
                 print(f"⚠️ Error extracting product URL: {e}")
         print("Extracted product URLs:", product_urls)
 
-        # Process each product URL separately
+        # Process each product detail page
         for prod_url in product_urls:
             try:
                 driver.get(prod_url)
                 time.sleep(5)  # Allow detail page to load
 
-                # Extract Product Title
+                # Extract Product Title: try by ID first, then fallback to data-testid
                 try:
-                    product_name = driver.find_element(By.CSS_SELECTOR, "h1[data-testid='product_title']").text.strip()
+                    product_title = driver.find_element(By.CSS_SELECTOR, "h1#pdp_product_title").text.strip()
                 except Exception as e:
-                    product_name = "Unknown Product Title"
-                    print(f"⚠️ Could not extract product title: {e}")
+                    try:
+                        product_title = driver.find_element(By.CSS_SELECTOR, "h1[data-testid='product_title']").text.strip()
+                    except Exception as e:
+                        product_title = "Unknown Product Title"
+                        print(f"⚠️ Could not extract product title: {e}")
 
-                # Extract Style ID from the URL (assumes the last segment is the style ID)
+                # Extract Style ID from URL (assume the last segment is the style ID)
                 style_id = prod_url.split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
-                # Extract Price Information using the new data-testid attributes
+                # Extract Price Information using the price container structure
                 try:
-                    sale_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
+                    sale_price_text = driver.find_element(By.CSS_SELECTOR, "div#price-container span[data-testid='currentPrice-container']").text
                     sale_price = sale_price_text.replace("$", "").strip()
                 except Exception as e:
                     sale_price = None
 
                 try:
-                    regular_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
+                    regular_price_text = driver.find_element(By.CSS_SELECTOR, "div#price-container span[data-testid='initialPrice-container']").text
                     regular_price = regular_price_text.replace("$", "").strip()
                 except Exception as e:
-                    regular_price = sale_price  # fallback
+                    regular_price = sale_price
 
                 try:
-                    discount_percent = driver.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
+                    discount_percent = driver.find_element(By.CSS_SELECTOR, "div#price-container span[data-testid='OfferPercentage']").text.strip()
                 except Exception as e:
                     discount_percent = None
 
-                # Convert prices to float if possible
+                # Convert price strings to float if possible
                 try:
                     sale_price = float(sale_price) if sale_price else None
                     regular_price = float(regular_price) if regular_price else None
                 except:
                     sale_price, regular_price = None, None
 
-                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
+                print(f"🟢 Nike Product Found: {product_title} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
 
                 deals.append({
                     "store": "Nike",
-                    "product_name": product_name,
+                    "product_name": product_title,
                     "product_url": prod_url,
                     "sale_price": sale_price,
                     "regular_price": regular_price,
