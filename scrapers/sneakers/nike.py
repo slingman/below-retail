@@ -37,9 +37,9 @@ def get_nike_deals():
                 except:
                     product_url = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__link-overlay']").get_attribute("href")
 
-                # Extract Style ID from URL
-                style_id = product_url.split("/")[-1]  # Get last part of URL (e.g., FZ5808-400)
-                print(f"✅ Nike Style ID Extracted: {style_id}")  # Debugging print
+                # Extract Style ID from URL (last part, e.g., FZ5808-400)
+                style_id = product_url.split("/")[-1]
+                print(f"✅ Nike Style ID Extracted: {style_id}")
 
                 # Extract Image URL
                 try:
@@ -47,36 +47,41 @@ def get_nike_deals():
                 except:
                     image_url = card.find_element(By.CSS_SELECTOR, "img.product-card__hero-image").get_attribute("src")
 
-                # Extract Prices with fallbacks
+                # Extract Prices using the new data-testid attributes
                 try:
-                    sale_price_element = card.find_element(By.CSS_SELECTOR, "div[data-testid='product-price-reduced']")
-                    sale_price = sale_price_element.text.replace("$", "").strip()
-                except:
+                    sale_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
+                    sale_price = sale_price_text.replace("$", "").strip()
+                except Exception as e:
                     sale_price = None
 
                 try:
-                    original_price_element = card.find_element(By.CSS_SELECTOR, "div[data-testid='product-price']")
-                    original_price = original_price_element.text.replace("$", "").strip()
-                except:
-                    original_price = sale_price  # If no original price, assume no discount
+                    regular_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
+                    regular_price = regular_price_text.replace("$", "").strip()
+                except Exception as e:
+                    regular_price = sale_price  # If no regular price found, assume no discount
 
-                # Ensure price is properly formatted
+                try:
+                    discount_percent = card.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
+                except Exception as e:
+                    discount_percent = None
+
+                # Convert price strings to floats if possible
                 try:
                     sale_price = float(sale_price) if sale_price else None
-                    original_price = float(original_price) if original_price else None
+                    regular_price = float(regular_price) if regular_price else None
                 except:
-                    sale_price, original_price = None, None
+                    sale_price, regular_price = None, None
 
-                print(f"🟢 Nike Product Found: {product_name} | Price: {sale_price} | Style ID: {style_id}")
+                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
 
-                # Store deal information
                 deals.append({
                     "store": "Nike",
                     "product_name": product_name,
                     "product_url": product_url,
                     "image_url": image_url,
                     "sale_price": sale_price,
-                    "original_price": original_price,
+                    "regular_price": regular_price,
+                    "discount_percent": discount_percent,
                     "style_id": style_id,
                 })
 
@@ -87,3 +92,8 @@ def get_nike_deals():
 
     finally:
         driver.quit()
+
+if __name__ == "__main__":
+    deals = get_nike_deals()
+    for deal in deals:
+        print(deal)
