@@ -10,25 +10,23 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Helper: Get text from an element using .text, falling back to innerText.
-def get_element_text(driver, xpath):
+def get_details_text(driver, xpath):
     try:
-        elem = driver.find_element(By.XPATH, xpath)
-        # Scroll element into view
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+        element = driver.find_element(By.XPATH, xpath)
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
         time.sleep(1)
-        text = elem.text
+        text = element.text
         if not text:
-            text = elem.get_attribute("innerText")
+            text = element.get_attribute("innerText")
         return text.strip()
     except Exception as e:
-        print(f"⚠️ Error getting text for {xpath}: {e}")
+        print(f"⚠️ Error getting details text: {e}")
         return ""
 
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
-    # Base variant URL format for reloading variant pages.
-    variant_url_format = "https://www.footlocker.com/product/~/{}.html"
+    details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
+    supplier_span_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
 
     # Set up WebDriver
     service = Service(ChromeDriverManager().install())
@@ -37,7 +35,6 @@ def get_footlocker_deals():
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    # Use a common user agent
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_window_size(1920, 1080)
@@ -47,7 +44,7 @@ def get_footlocker_deals():
     try:
         driver.get(search_url)
         time.sleep(8)
-
+        
         # Handle cookie consent if present
         try:
             WebDriverWait(driver, 5).until(
@@ -58,7 +55,7 @@ def get_footlocker_deals():
         except Exception:
             print("ℹ️ No cookie consent dialog found or couldn't be closed")
         
-        # Extract product cards from the search results
+        # Fetch product cards from the search results
         product_cards = WebDriverWait(driver, 15).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
@@ -68,7 +65,7 @@ def get_footlocker_deals():
 
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
 
-        # Collect product URLs for the first 3 products
+        # Extract product URLs (first 3)
         product_urls = []
         for card in product_cards[:3]:
             try:
@@ -76,17 +73,16 @@ def get_footlocker_deals():
                 product_urls.append(url)
             except Exception as e:
                 print(f"⚠️ Error extracting product URL: {e}")
-
         print("Extracted product URLs:", product_urls)
 
-        # For each product URL, process its colorways
+        # Process each product URL separately
         for idx, prod_url in enumerate(product_urls, start=1):
             try:
                 print(f"\n🔄 Processing product [{idx}]...")
                 driver.get(prod_url)
                 time.sleep(8)
-                
-                # Get product title for logging
+
+                # Get product title
                 try:
                     prod_title = WebDriverWait(driver, 8).until(
                         EC.presence_of_element_located((By.CLASS_NAME, "ProductName-primary"))
@@ -95,9 +91,8 @@ def get_footlocker_deals():
                 except Exception:
                     prod_title = f"Product {idx}"
                     print(f"⚠️ Could not extract product title, using '{prod_title}'")
-                
-                # Open details section if not already open
-                details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
+
+                # Open details section if not open
                 try:
                     details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                     if "open" not in details_panel.get_attribute("class"):
@@ -113,100 +108,80 @@ def get_footlocker_deals():
                 except Exception:
                     print("⚠️ Details panel not found; proceeding anyway")
                 time.sleep(3)
-                
-                # Extract base product number from the details panel (first span)
-                base_prod_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
-                base_product_number = get_element_text(driver, base_prod_xpath)
-                print(f"Base Product Number: {base_product_number}")
-                
-                # Get colorway buttons using multiple selectors
-                colorway_selectors = [
-                    (By.CLASS_NAME, "ColorwayStyles-field"),
-                    (By.XPATH, "//div[contains(@class, 'ColorwaySelector')]//div[contains(@class, 'ColorwayStyles-field')]"),
-                    (By.XPATH, "//div[contains(@class, 'ColorwaySelector')]//img[@alt]")
-                ]
-                colorway_buttons = []
-                for sel_type, sel in colorway_selectors:
-                    try:
-                        colorway_buttons = WebDriverWait(driver, 10).until(
-                            EC.presence_of_all_elements_located((sel_type, sel))
-                        )
-                        if colorway_buttons:
-                            print(f"✅ Found colorway buttons using selector: {sel}")
-                            break
-                    except Exception:
-                        continue
-                if not colorway_buttons:
+
+                # Get colorway buttons (we'll re-find them by index on each loop)
+                # Use one of the selectors – for simplicity, we'll use the class name
+                base_selector = (By.CLASS_NAME, "ColorwayStyles-field")
+                try:
+                    base_colorways = WebDriverWait(driver, 10).until(
+                        EC.presence_of_all_elements_located(base_selector)
+                    )
+                    num_colorways = len(base_colorways)
+                    print(f"🎨 Found {num_colorways} colorways for product [{idx}].")
+                except Exception:
                     print(f"⚠️ No colorways found for product [{idx}]. Using default style.")
-                    colorway_buttons = [None]
-                else:
-                    print(f"🎨 Found {len(colorway_buttons)} colorways for product [{idx}].")
-                
-                # Process each colorway
-                for color_idx, color_button in enumerate(colorway_buttons, start=1):
+                    num_colorways = 1
+
+                # Process each colorway by index (re-find element each time)
+                for color_index in range(num_colorways):
                     try:
-                        print(f"\n🔄 Processing colorway [{color_idx}] for {prod_title}...")
-                        if color_button is not None:
-                            try:
-                                c_img = color_button.find_element(By.TAG_NAME, "img")
-                                c_src = c_img.get_attribute("src")
-                                pn_patterns = [r"/([A-Z0-9]{6,10})\?", r"_([A-Z0-9]{6,10})_", r"-([A-Z0-9]{6,10})-"]
-                                variant_product_number = None
-                                for pattern in pn_patterns:
-                                    m = re.search(pattern, c_src)
-                                    if m:
-                                        variant_product_number = m.group(1)
-                                        break
-                            except Exception as e:
-                                print(f"⚠️ Error extracting product number from image: {e}")
-                                traceback.print_exc()
-                                variant_product_number = f"UNKNOWN-{color_idx}"
-                            if not variant_product_number:
-                                variant_product_number = f"UNKNOWN-{color_idx}"
-                            print(f"Variant Product Number: {variant_product_number}")
-                            
-                            # Click the colorway thumbnail using ActionChains
-                            try:
-                                actions = ActionChains(driver)
-                                actions.move_to_element(color_button).click().perform()
-                                print(f"✅ Clicked on colorway [{color_idx}] using ActionChains")
-                            except Exception as e:
-                                print(f"⚠️ ActionChains click failed: {e}")
-                                driver.execute_script("arguments[0].click();", color_button)
-                                print(f"✅ Clicked on colorway [{color_idx}] using JavaScript fallback")
-                            
-                            # After clicking, wait a bit (e.g. 5 seconds) for the DOM to update
-                            time.sleep(5)
-                            
-                            # Read updated product number from details panel
-                            updated_prod_number = get_element_text(driver, base_prod_xpath)
-                            print(f"Updated Product Number in details: {updated_prod_number}")
-                            
-                            # If the updated product number is different from the base,
-                            # construct the variant URL to force a full reload.
-                            if updated_prod_number and updated_prod_number != base_product_number:
-                                variant_url = "https://www.footlocker.com/product/~/" + updated_prod_number + ".html"
-                                print(f"Navigating to variant URL: {variant_url}")
-                                driver.get(variant_url)
-                                time.sleep(8)  # Wait for variant page to load
-                            else:
-                                print("Base product remains; using current page for variant")
-                            
-                        else:
-                            variant_product_number = "DEFAULT"
-                            print("ℹ️ Processing default colorway only")
+                        print(f"\n🔄 Processing colorway [{color_index+1}] for {prod_title}...")
+                        # Re-find colorway buttons
+                        colorway_buttons = driver.find_elements(*base_selector)
+                        if not colorway_buttons or color_index >= len(colorway_buttons):
+                            print(f"⚠️ Could not re-find colorway button for index {color_index+1}. Skipping.")
+                            continue
+                        color_button = colorway_buttons[color_index]
                         
-                        # Now extract supplier SKU from the second span of the details panel
-                        supplier_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
-                        supplier_sku = get_element_text(driver, supplier_xpath)
-                        print(f"Extracted Supplier SKU from span: {supplier_sku}")
+                        # Extract product number from colorway image
+                        try:
+                            c_img = color_button.find_element(By.TAG_NAME, "img")
+                            c_src = c_img.get_attribute("src")
+                            pn_patterns = [r"/([A-Z0-9]{6,10})\?", r"_([A-Z0-9]{6,10})_", r"-([A-Z0-9]{6,10})-"]
+                            variant_product_number = None
+                            for pattern in pn_patterns:
+                                m = re.search(pattern, c_src)
+                                if m:
+                                    variant_product_number = m.group(1)
+                                    break
+                        except Exception as e:
+                            print(f"⚠️ Error extracting product number from image: {e}")
+                            traceback.print_exc()
+                            variant_product_number = f"UNKNOWN-{color_index+1}"
+                        if not variant_product_number:
+                            variant_product_number = f"UNKNOWN-{color_index+1}"
+                        print(f"Variant Product Number: {variant_product_number}")
+                        
+                        # Click the colorway using ActionChains (re-find element each time)
+                        try:
+                            actions = ActionChains(driver)
+                            actions.move_to_element(color_button).click().perform()
+                            print(f"✅ Clicked on colorway [{color_index+1}] using ActionChains")
+                        except Exception as e:
+                            print(f"⚠️ ActionChains click failed: {e}")
+                            driver.execute_script("arguments[0].click();", color_button)
+                            print(f"✅ Clicked on colorway [{color_index+1}] using JavaScript fallback")
+                        
+                        # Dispatch a resize event to force reflow
+                        driver.execute_script("window.dispatchEvent(new Event('resize'));")
+                        # Wait for 15 seconds to allow the page to update fully
+                        time.sleep(15)
+                        
+                        # Read updated supplier SKU from the second span in the details panel
+                        supplier_sku = ""
+                        try:
+                            supplier_sku_text = driver.find_element(By.XPATH, supplier_span_xpath).text
+                            supplier_sku = supplier_sku_text.split(":", 1)[-1].strip()
+                            print(f"✅ Extracted Supplier SKU from span: {supplier_sku}")
+                        except Exception as e:
+                            print(f"⚠️ Error extracting supplier SKU from span: {e}")
+                            supplier_sku = ""
                         
                         if not supplier_sku:
-                            print(f"⚠️ Could not extract Supplier SKU for colorway [{color_idx}]")
+                            print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}].")
                             continue
                         
-                        # Save screenshot for debugging
-                        screenshot_path = f"footlocker_product_{idx}_colorway_{color_idx}.png"
+                        screenshot_path = f"footlocker_product_{idx}_colorway_{color_index+1}.png"
                         try:
                             driver.save_screenshot(screenshot_path)
                             print(f"📷 Saved screenshot to {screenshot_path}")
@@ -216,15 +191,15 @@ def get_footlocker_deals():
                         deals.append({
                             "store": "Foot Locker",
                             "product_title": prod_title,
-                            "product_url": product_url,
+                            "product_url": prod_url,
                             "product_number": variant_product_number,
                             "supplier_sku": supplier_sku,
-                            "colorway_index": color_idx
+                            "colorway_index": color_index+1
                         })
                         print(f"✅ Stored SKU: {supplier_sku} with Product # {variant_product_number}")
                     
                     except Exception as e:
-                        print(f"⚠️ Error processing colorway [{color_idx}]: {e}")
+                        print(f"⚠️ Error processing colorway [{color_index+1}]: {e}")
                         traceback.print_exc()
                         
                 time.sleep(5)
