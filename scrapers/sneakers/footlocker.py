@@ -58,7 +58,7 @@ def get_footlocker_deals():
     product_num_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
     supplier_sku_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
     
-    # Price selectors using CSS (based on provided HTML snippet)
+    # Price selectors using CSS (based on the provided HTML snippet)
     sale_price_css = "div.ProductPrice span.ProductPrice-final"
     regular_price_css = "div.ProductPrice span.ProductPrice-original"
     discount_percent_css = "div.ProductPrice div.ProductPrice-percent"
@@ -112,15 +112,10 @@ def get_footlocker_deals():
                 driver.get(prod_url)
                 time.sleep(8)
                 
-                # Extract Product Title with fallback: try h1.product-title, then .ProductName-primary.
                 try:
                     product_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
-                except Exception as e:
-                    try:
-                        product_title = driver.find_element(By.CLASS_NAME, "ProductName-primary").text.strip()
-                    except Exception as e:
-                        product_title = "Unknown Product Title"
-                        print(f"⚠️ Could not extract product title, using default: {e}")
+                except Exception:
+                    product_title = "Unknown Product Title"
                 print("📝 Product Title:", product_title)
                 
                 open_details_tab(driver, details_panel_xpath)
@@ -225,7 +220,7 @@ def get_footlocker_deals():
                         print("Extracted Regular Price:", regular_price)
                         print("Extracted Discount Percent:", discount_percent)
                         
-                        # Try extracting the product title from the variant page using a fallback
+                        # Use product title from Foot Locker page if available
                         try:
                             fl_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
                         except:
