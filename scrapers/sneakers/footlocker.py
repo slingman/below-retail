@@ -26,7 +26,7 @@ def get_element_text(driver, xpath):
 
 def extract_product_number(text):
     """
-    Extracts the product number from text like 'Product #: B9660002'.
+    Extracts the product number from text like "Product #: B9660002".
     """
     m = re.search(r"Product #:\s*(\S+)", text)
     return m.group(1) if m else text
@@ -101,9 +101,9 @@ def get_footlocker_deals():
 
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
 
-        # Extract URLs for the first 3 products.
+        # Extract URLs for the first 2 products.
         product_urls = []
-        for card in product_cards[:3]:
+        for card in product_cards[:2]:
             try:
                 url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 product_urls.append(url)
@@ -153,7 +153,7 @@ def get_footlocker_deals():
                 for color_index in range(num_colorways):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {prod_title}...")
-                        # Re-find the colorway buttons.
+                        # Re-find the colorway button.
                         colorway_buttons = driver.find_elements(By.CLASS_NAME, "ColorwayStyles-field")
                         if color_index >= len(colorway_buttons):
                             print(f"⚠️ No colorway button at index {color_index+1}. Skipping.")
@@ -198,13 +198,12 @@ def get_footlocker_deals():
                         updated_prod = extract_product_number(updated_text)
                         print("Updated Product Number:", updated_prod)
 
-                        # If updated product number differs, navigate to variant URL.
+                        # If updated product number differs from base, navigate to variant URL.
                         if updated_prod and updated_prod != base_prod:
                             variant_url = variant_url_format.format(updated_prod)
                             print("Navigating to variant URL:", variant_url)
                             driver.get(variant_url)
                             time.sleep(8)
-                            # Ensure the Details tab is open on the variant page.
                             open_details_tab(driver, details_panel_xpath)
                             time.sleep(3)
                         else:
@@ -217,7 +216,7 @@ def get_footlocker_deals():
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}].")
                             continue
 
-                        # Extract price information. Use try/except to default to "N/A" if not found.
+                        # Extract price information.
                         try:
                             sale_price = get_element_text(driver, sale_price_xpath)
                         except Exception:
@@ -273,5 +272,4 @@ if __name__ == "__main__":
     deals = get_footlocker_deals()
     print("\nFinal Foot Locker Deals:")
     for i, deal in enumerate(deals, 1):
-        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']}, "
-              f"Sale Price: {deal['sale_price']}, Regular Price: {deal['regular_price']}, Discount: {deal['discount_percent']})")
+        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']}, Sale Price: {deal['sale_price']}, Regular Price: {deal['regular_price']}, Discount: {deal['discount_percent']})")
