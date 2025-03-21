@@ -101,9 +101,9 @@ def get_footlocker_deals():
 
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
 
-        # Extract URLs for the first 2 products.
+        # Extract URLs for the first 4 products.
         product_urls = []
-        for card in product_cards[:2]:
+        for card in product_cards[:4]:
             try:
                 url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 product_urls.append(url)
