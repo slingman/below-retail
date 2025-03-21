@@ -25,12 +25,16 @@ def get_element_text(driver, xpath):
         return ""
 
 def extract_product_number(text):
-    """Extracts the product number from text like 'Product #: B9660002'."""
+    """
+    Extracts the product number from text like 'Product #: B9660002'.
+    """
     m = re.search(r"Product #:\s*(\S+)", text)
     return m.group(1) if m else text
 
 def open_details_tab(driver, details_panel_xpath):
-    """Ensures the Details panel is open; if not, clicks the Details tab."""
+    """
+    Ensures the Details panel is open; if not, clicks the Details tab.
+    """
     try:
         panel = driver.find_element(By.XPATH, details_panel_xpath)
         if "open" not in panel.get_attribute("class"):
@@ -55,10 +59,10 @@ def get_footlocker_deals():
     details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
     product_num_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
     supplier_sku_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
-    # XPaths for prices.
-    sale_price_xpath = "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-final')]"
-    regular_price_xpath = "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-original')]"
-    discount_percent_xpath = "//div[contains(@class, 'ProductPrice-percent')]"
+    # XPaths for price elements.
+    sale_price_xpath = "//div[@class='ProductPrice']//span[contains(@class, 'ProductPrice-final')]"
+    regular_price_xpath = "//div[@class='ProductPrice']//span[contains(@class, 'ProductPrice-original')]"
+    discount_percent_xpath = "//div[@class='ProductPrice']//div[contains(@class, 'ProductPrice-percent')]"
 
     # Set up WebDriver.
     service = Service(ChromeDriverManager().install())
@@ -87,7 +91,7 @@ def get_footlocker_deals():
         except Exception:
             print("ℹ️ No cookie consent dialog found or couldn't be closed")
 
-        # Get product cards.
+        # Get product cards from the search page.
         product_cards = WebDriverWait(driver, 15).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
@@ -149,6 +153,7 @@ def get_footlocker_deals():
                 for color_index in range(num_colorways):
                     try:
                         print(f"\n🔄 Processing colorway [{color_index+1}] for {prod_title}...")
+                        # Re-find the colorway buttons.
                         colorway_buttons = driver.find_elements(By.CLASS_NAME, "ColorwayStyles-field")
                         if color_index >= len(colorway_buttons):
                             print(f"⚠️ No colorway button at index {color_index+1}. Skipping.")
@@ -199,7 +204,7 @@ def get_footlocker_deals():
                             print("Navigating to variant URL:", variant_url)
                             driver.get(variant_url)
                             time.sleep(8)
-                            # Ensure the Details tab is open on variant page.
+                            # Ensure the Details tab is open on the variant page.
                             open_details_tab(driver, details_panel_xpath)
                             time.sleep(3)
                         else:
@@ -212,10 +217,19 @@ def get_footlocker_deals():
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}].")
                             continue
 
-                        # Extract price information.
-                        sale_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-final')]")
-                        regular_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-original')]")
-                        discount_percent = get_element_text(driver, "//div[contains(@class, 'ProductPrice-percent')]")
+                        # Extract price information. Use try/except to default to "N/A" if not found.
+                        try:
+                            sale_price = get_element_text(driver, sale_price_xpath)
+                        except Exception:
+                            sale_price = "N/A"
+                        try:
+                            regular_price = get_element_text(driver, regular_price_xpath)
+                        except Exception:
+                            regular_price = "N/A"
+                        try:
+                            discount_percent = get_element_text(driver, discount_percent_xpath)
+                        except Exception:
+                            discount_percent = "N/A"
                         print("Extracted Sale Price:", sale_price)
                         print("Extracted Regular Price:", regular_price)
                         print("Extracted Discount Percent:", discount_percent)
@@ -259,4 +273,5 @@ if __name__ == "__main__":
     deals = get_footlocker_deals()
     print("\nFinal Foot Locker Deals:")
     for i, deal in enumerate(deals, 1):
-        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']}, Sale Price: {deal['sale_price']}, Regular Price: {deal['regular_price']}, Discount: {deal['discount_percent']})")
+        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']}, "
+              f"Sale Price: {deal['sale_price']}, Regular Price: {deal['regular_price']}, Discount: {deal['discount_percent']})")
