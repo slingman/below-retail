@@ -18,7 +18,7 @@ def get_nike_deals():
 
     try:
         driver.get(url)
-        time.sleep(5)  # Allow time for page to load
+        time.sleep(5)  # Allow search results to load
 
         deals = []
         product_cards = driver.find_elements(By.CLASS_NAME, "product-card")
@@ -37,27 +37,30 @@ def get_nike_deals():
 
         # Process each product detail page
         for prod_url in product_urls:
+            # Skip URLs that contain "/launch/" (announcement pages)
+            if "/launch/" in prod_url:
+                print(f"⚠️ Skipping product with launch URL: {prod_url}")
+                continue
+
             try:
                 driver.get(prod_url)
                 time.sleep(5)  # Allow detail page to load
 
-                # Extract Product Title: try by id then data-testid, then fallback to announcement title
+                # Extract Product Title: try by id then fallback to data-testid
                 try:
                     product_title = driver.find_element(By.CSS_SELECTOR, "h1#pdp_product_title").text.strip()
                 except Exception as e:
                     try:
                         product_title = driver.find_element(By.CSS_SELECTOR, "h1[data-testid='product_title']").text.strip()
                     except Exception as e:
-                        # If title not found, assume this is an announcement-type page
-                        style_id = prod_url.split("/")[-1]
-                        product_title = f"Announcement - {style_id}"
-                        print(f"⚠️ Could not extract product title, defaulting to '{product_title}'")
+                        product_title = "Unknown Product Title"
+                        print(f"⚠️ Could not extract product title: {e}")
 
-                # Extract Style ID from URL (assume the last segment is the style ID)
+                # Extract Style ID from URL (assumes the last segment is the style ID)
                 style_id = prod_url.split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
-                # Extract Price Information using new data-testid attributes
+                # Extract Price Information using the live site selectors
                 try:
                     sale_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
                     sale_price = sale_price_text.replace("$", "").strip()
@@ -68,7 +71,7 @@ def get_nike_deals():
                     regular_price_text = driver.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
                     regular_price = regular_price_text.replace("$", "").strip()
                 except Exception as e:
-                    regular_price = sale_price  # fallback
+                    regular_price = sale_price  # fallback if not found
 
                 try:
                     discount_percent = driver.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
