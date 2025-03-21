@@ -23,6 +23,19 @@ def get_details_text(driver, xpath):
         print(f"⚠️ Error getting details text: {e}")
         return ""
 
+def get_supplier_sku(driver, supplier_xpath):
+    try:
+        # Get the text from the supplier SKU element
+        supplier_text = driver.find_element(By.XPATH, supplier_xpath).text
+        # Expecting text like "Supplier-sku #: FB9660-002"
+        parts = supplier_text.split(":", 1)
+        if len(parts) > 1:
+            return parts[1].strip()
+        return supplier_text.strip()
+    except Exception as e:
+        print(f"⚠️ Error extracting supplier SKU: {e}")
+        return ""
+
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
 
@@ -38,6 +51,9 @@ def get_footlocker_deals():
     driver.set_window_size(1920, 1080)
 
     footlocker_deals = []
+    # This is the XPath to the details panel and to the supplier SKU span within it.
+    details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
+    supplier_sku_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[2]"
 
     try:
         driver.get(search_url)
@@ -86,8 +102,7 @@ def get_footlocker_deals():
                     product_title = f"Product {index+1}"
                     print(f"⚠️ Could not extract product title, using '{product_title}'")
 
-                # Open details section if not already open
-                details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
+                # Open details section
                 try:
                     details_panel = driver.find_element(By.XPATH, details_panel_xpath)
                     if "open" not in details_panel.get_attribute("class"):
@@ -127,6 +142,8 @@ def get_footlocker_deals():
                 else:
                     print(f"🎨 Found {len(colorway_buttons)} colorways for product [{index+1}].")
                 
+                previous_supplier_sku = None  # For tracking changes
+                
                 # Process each colorway
                 for color_index, color_button in enumerate(colorway_buttons):
                     try:
@@ -156,49 +173,38 @@ def get_footlocker_deals():
                                 colorway_product_number = f"UNKNOWN-{color_index+1}"
                             print(f"🔄 Colorway Product #: {colorway_product_number}")
                             
-                            # Capture current details text before clicking
-                            previous_details_text = get_details_text(driver, details_panel_xpath)
+                            # Click the colorway thumbnail using ActionChains
+                            try:
+                                actions = ActionChains(driver)
+                                actions.move_to_element(color_button).click().perform()
+                                print(f"✅ Clicked on colorway [{color_index+1}] using ActionChains")
+                            except Exception as e:
+                                print(f"⚠️ ActionChains click failed: {e}")
+                                driver.execute_script("arguments[0].click();", color_button)
+                                print(f"✅ Clicked on colorway [{color_index+1}] using JavaScript fallback")
+                            
+                            # Wait for the details panel to update; increase delay to 15 seconds
+                            time.sleep(15)
                         else:
                             colorway_product_number = "DEFAULT"
                             print("ℹ️ Processing default colorway only")
-                            previous_details_text = ""
                         
-                        # Use ActionChains to click the colorway thumbnail
+                        # Now, specifically get the supplier SKU text from the second span within the details panel
                         try:
-                            actions = ActionChains(driver)
-                            actions.move_to_element(color_button).click().perform()
-                            print(f"✅ Clicked on colorway [{color_index+1}] using ActionChains")
+                            supplier_sku_text = driver.find_element(By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']/span[2]").text
+                            supplier_sku = supplier_sku_text.split(":", 1)[-1].strip()
+                            print(f"✅ Extracted Supplier SKU from span: {supplier_sku}")
                         except Exception as e:
-                            print(f"⚠️ ActionChains click failed: {e}")
-                            driver.execute_script("arguments[0].click();", color_button)
-                            print(f"✅ Clicked on colorway [{color_index+1}] using JavaScript fallback")
-                        # Wait 15 seconds to allow the details panel to update
-                        time.sleep(15)
-                        
-                        # Re-read details panel text
-                        details_text = get_details_text(driver, details_panel_xpath)
-                        print("Details panel text:", details_text)
-                        
-                        sku_patterns = [
-                            r"Supplier-sku #:\s*(\S+)",
-                            r"Supplier[-\s]sku:?\s*(\S+)",
-                            r"Item #:\s*(\S+)",
-                            r"Style #:\s*(\S+)",
-                            r"Style:?\s*(\S+)"
-                        ]
-                        supplier_sku = None
-                        for pattern in sku_patterns:
-                            match = re.search(pattern, details_text, re.IGNORECASE)
-                            if match:
-                                supplier_sku = match.group(1).strip()
-                                print(f"✅ Found Supplier SKU using pattern: {pattern}")
-                                break
+                            print(f"⚠️ Error extracting supplier SKU from span: {e}")
+                            supplier_sku = None
                         
                         if not supplier_sku:
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}]")
                             continue
                         
-                        print(f"✅ Extracted Supplier SKU: {supplier_sku}")
+                        # Optionally, if you want to force a re-read if the supplier SKU hasn't changed,
+                        # you could compare to previous_supplier_sku and wait longer, but in this version we simply read it.
+                        previous_supplier_sku = supplier_sku
                         
                         screenshot_path = f"footlocker_product_{index+1}_colorway_{color_index+1}.png"
                         try:
