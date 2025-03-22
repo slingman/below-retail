@@ -7,12 +7,12 @@ def format_deal(deal, source):
     """
     Returns a formatted string:
     Product Title | Identifier | Sale Price | Regular Price | Discount % | Product URL
-    For Nike, identifier is the style_id; for Foot Locker, it's the supplier_sku.
+    For Nike, identifier is now the style_number; for Foot Locker, it's the supplier_sku.
     """
     if not deal:
         return "No deal found."
     if source.lower() == "nike":
-        identifier = deal.get("style_id", "N/A")
+        identifier = deal.get("style_number", "N/A")
         title = deal.get("product_name", "N/A")
         url = deal.get("product_url", "N/A")
     else:
@@ -32,17 +32,17 @@ def effective_price(product):
         return None
     return product.get("sale_price") if product.get("sale_price") is not None else product.get("regular_price")
 
-def match_and_compare(nike_deals, footlocker_deals, target_style_id):
+def match_and_compare(nike_deals, footlocker_deals, target_style_number):
     """
-    Matches a Nike product (by style_id) with a Foot Locker product (by supplier_sku).
+    Matches a Nike product (by style_number) with a Foot Locker product (by supplier_sku).
     Returns the matching Nike product, Foot Locker product, the cheaper store, and price difference.
     """
-    target = target_style_id.upper().strip()
+    target = target_style_number.upper().strip()
     nike_product = None
     footlocker_product = None
 
     for prod in nike_deals:
-        if prod.get("style_id", "").upper().strip() == target:
+        if prod.get("style_number", "").upper().strip() == target:
             nike_product = prod
             break
 
@@ -87,11 +87,11 @@ def main():
     for deal in footlocker_deals:
         print(format_deal(deal, "Foot Locker"))
     
-    TARGET_STYLE_ID = "FZ5808-400"
-    nike_prod, fl_prod, cheaper_store, price_diff = match_and_compare(nike_deals, footlocker_deals, TARGET_STYLE_ID)
+    TARGET_STYLE_NUMBER = "FZ5808-400"
+    nike_prod, fl_prod, cheaper_store, price_diff = match_and_compare(nike_deals, footlocker_deals, TARGET_STYLE_NUMBER)
 
     print("\n==================== Matched Product Comparison ====================")
-    print(f"Target Style ID: {TARGET_STYLE_ID}\n")
+    print(f"Target Style Number: {TARGET_STYLE_NUMBER}\n")
     print("Nike Deal:")
     print(format_deal(nike_prod, "Nike"))
     print("\nFoot Locker Deal:")
