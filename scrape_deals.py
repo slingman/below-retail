@@ -19,8 +19,8 @@ def format_deal(deal, source):
         identifier = deal.get("supplier_sku", "N/A")
         title = deal.get("product_title", "N/A")
         url = deal.get("product_url", "N/A")
-    sale = f"${deal.get('sale_price')}" if deal.get("sale_price") is not None else "N/A"
-    regular = f"${deal.get('regular_price')}" if deal.get("regular_price") is not None else "N/A"
+    sale = f"${deal.get('sale_price')}" if deal.get("sale_price") not in (None, "") else "N/A"
+    regular = f"${deal.get('regular_price')}" if deal.get("regular_price") not in (None, "") else "N/A"
     discount = deal.get("discount_percent", "N/A")
     return f"{title} | {identifier} | {sale} | {regular} | {discount} | {url}"
 
@@ -30,7 +30,15 @@ def effective_price(product):
     """
     if product is None:
         return None
-    return product.get("sale_price") if product.get("sale_price") is not None else product.get("regular_price")
+    return product.get("sale_price") if product.get("sale_price") not in (None, "") else product.get("regular_price")
+
+def clean_supplier_sku(sku):
+    """
+    Removes any prefix like "Supplier-sku #:" (case-insensitive) from the SKU.
+    """
+    if sku:
+        return sku.replace("Supplier-sku #:", "").strip().upper()
+    return sku
 
 def match_and_compare(nike_deals, footlocker_deals, target_style_number):
     """
@@ -47,20 +55,22 @@ def match_and_compare(nike_deals, footlocker_deals, target_style_number):
             break
 
     for prod in footlocker_deals:
-        if prod.get("supplier_sku", "").upper().strip() == target:
+        sku = prod.get("supplier_sku", "")
+        sku_clean = clean_supplier_sku(sku)
+        if sku_clean == target:
             footlocker_product = prod
             break
 
     nike_price = effective_price(nike_product)
     fl_price = effective_price(footlocker_product)
 
-    if nike_price is not None and fl_price is not None:
-        if nike_price < fl_price:
+    if nike_price not in (None, "") and fl_price not in (None, ""):
+        if float(nike_price) < float(fl_price):
             cheaper_store = "Nike"
-            price_diff = fl_price - nike_price
-        elif fl_price < nike_price:
+            price_diff = float(fl_price) - float(nike_price)
+        elif float(fl_price) < float(nike_price):
             cheaper_store = "Foot Locker"
-            price_diff = nike_price - fl_price
+            price_diff = float(nike_price) - float(fl_price)
         else:
             cheaper_store = "Same Price"
             price_diff = 0
