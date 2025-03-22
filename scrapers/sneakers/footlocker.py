@@ -21,7 +21,8 @@ def get_element_text(driver, xpath):
             text = elem.get_attribute("innerText").strip()
         return text
     except Exception as e:
-        print(f"⚠️ Error getting text from {xpath}: {e}")
+        # Instead of printing full traceback, we print a concise warning.
+        print(f"⚠️ Warning: Could not get text from {xpath}. Returning empty string.")
         return ""
 
 def extract_product_number(text):
@@ -213,9 +214,9 @@ def get_footlocker_deals():
                             continue
 
                         # Extract price information.
-                        sale_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-final')]")
-                        regular_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-original')]")
-                        discount_percent = get_element_text(driver, "//div[contains(@class, 'ProductPrice-percent')]")
+                        sale_price = get_element_text(driver, sale_price_xpath)
+                        regular_price = get_element_text(driver, regular_price_xpath)
+                        discount_percent = get_element_text(driver, discount_percent_xpath)
                         print("Extracted Sale Price:", sale_price)
                         print("Extracted Regular Price:", regular_price)
                         print("Extracted Discount Percent:", discount_percent)
