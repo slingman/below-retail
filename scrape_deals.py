@@ -3,11 +3,19 @@ import json
 from scrapers.sneakers.nike import get_nike_deals
 from scrapers.sneakers.footlocker import get_footlocker_deals
 
+def clean_supplier_sku(sku):
+    """
+    Removes any prefix like "Supplier-sku #:" from the SKU and converts to uppercase.
+    """
+    if sku:
+        return sku.replace("Supplier-sku #:", "").strip().upper()
+    return sku
+
 def format_deal(deal, source):
     """
     Returns a formatted string:
     Product Title | Identifier | Sale Price | Regular Price | Discount % | Product URL
-    For Nike, the identifier is the style_number; for Foot Locker, it's the supplier_sku.
+    For Nike, the identifier is the style_number; for Foot Locker, it's the cleaned supplier_sku.
     """
     if not deal:
         return "No deal found."
@@ -16,7 +24,8 @@ def format_deal(deal, source):
         title = deal.get("product_name", "N/A")
         url = deal.get("product_url", "N/A")
     else:
-        identifier = deal.get("supplier_sku", "N/A")
+        raw_sku = deal.get("supplier_sku", "N/A")
+        identifier = clean_supplier_sku(raw_sku)
         title = deal.get("product_title", "N/A")
         url = deal.get("product_url", "N/A")
     sale = f"${deal.get('sale_price')}" if deal.get("sale_price") not in (None, "") else "N/A"
@@ -32,14 +41,6 @@ def effective_price(product):
         return None
     return product.get("sale_price") if product.get("sale_price") not in (None, "") else product.get("regular_price")
 
-def clean_supplier_sku(sku):
-    """
-    Removes any prefix like "Supplier-sku #:" (case-insensitive) from the SKU.
-    """
-    if sku:
-        return sku.replace("Supplier-sku #:", "").strip().upper()
-    return sku
-
 def match_and_compare(nike_deals, footlocker_deals, target_style_number):
     """
     Matches a Nike product (by style_number) with a Foot Locker product (by supplier_sku).
@@ -49,11 +50,13 @@ def match_and_compare(nike_deals, footlocker_deals, target_style_number):
     nike_product = None
     footlocker_product = None
 
+    # Find matching Nike product by style_number.
     for prod in nike_deals:
         if prod.get("style_number", "").upper().strip() == target:
             nike_product = prod
             break
 
+    # Find matching Foot Locker product by cleaned supplier_sku.
     for prod in footlocker_deals:
         sku = prod.get("supplier_sku", "")
         sku_clean = clean_supplier_sku(sku)
@@ -65,15 +68,26 @@ def match_and_compare(nike_deals, footlocker_deals, target_style_number):
     fl_price = effective_price(footlocker_product)
 
     if nike_price not in (None, "") and fl_price not in (None, ""):
-        if float(nike_price) < float(fl_price):
-            cheaper_store = "Nike"
-            price_diff = float(fl_price) - float(nike_price)
-        elif float(fl_price) < float(nike_price):
-            cheaper_store = "Foot Locker"
-            price_diff = float(nike_price) - float(fl_price)
+        try:
+            nike_price_val = float(nike_price)
+            fl_price_val = float(fl_price)
+        except ValueError:
+            nike_price_val = None
+            fl_price_val = None
+
+        if nike_price_val is not None and fl_price_val is not None:
+            if nike_price_val < fl_price_val:
+                cheaper_store = "Nike"
+                price_diff = fl_price_val - nike_price_val
+            elif fl_price_val < nike_price_val:
+                cheaper_store = "Foot Locker"
+                price_diff = nike_price_val - fl_price_val
+            else:
+                cheaper_store = "Same Price"
+                price_diff = 0
         else:
-            cheaper_store = "Same Price"
-            price_diff = 0
+            cheaper_store = "Price not available for comparison"
+            price_diff = None
     else:
         cheaper_store = "Price not available for comparison"
         price_diff = None
