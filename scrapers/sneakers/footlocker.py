@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_element_text(driver, selector, use_css=True):
-    """Scroll to the element and return its text (or innerText if .text is empty)."""
+    """Scroll to the element and return its text (or innerText if empty)."""
     try:
         if use_css:
             elem = driver.find_element(By.CSS_SELECTOR, selector)
@@ -34,8 +34,8 @@ def extract_product_number(text):
 
 def extract_supplier_sku(driver):
     """
-    Searches all span elements in the details panel for text containing "Supplier-sku #:" 
-    and returns the extracted SKU.
+    Loops through all span elements in the details panel to find one that contains
+    "Supplier-sku #:" and returns the extracted SKU using regex.
     """
     try:
         spans = driver.find_elements(By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']//span")
@@ -67,6 +67,45 @@ def open_details_tab(driver, details_panel_xpath):
     except Exception:
         print("⚠️ Details panel not found; proceeding anyway")
 
+def get_price_info(driver, sale_css, regular_css, discount_css):
+    """
+    Uses WebDriverWait to wait for the price elements to be present.
+    Returns sale_price, regular_price, discount_percent (as strings, then converted to float later).
+    """
+    sale_price = None
+    regular_price = None
+    discount_percent = None
+    try:
+        sale_elem = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, sale_css))
+        )
+        sale_price_text = sale_elem.text.strip()
+        sale_price = sale_price_text.replace("$", "").strip()
+    except Exception as e:
+        print(f"⚠️ Error getting sale price using selector [{sale_css}]: {e}")
+    try:
+        regular_elem = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, regular_css))
+        )
+        regular_price_text = regular_elem.text.strip()
+        regular_price = regular_price_text.replace("$", "").strip()
+    except Exception as e:
+        print(f"⚠️ Error getting regular price using selector [{regular_css}]: {e}")
+    try:
+        discount_elem = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, discount_css))
+        )
+        discount_percent = discount_elem.text.strip()
+    except Exception as e:
+        print(f"⚠️ Error getting discount percent using selector [{discount_css}]: {e}")
+    try:
+        sale_price = float(sale_price) if sale_price else None
+        regular_price = float(regular_price) if regular_price else None
+    except Exception as e:
+        print(f"⚠️ Error converting prices to float: {e}")
+        sale_price, regular_price = None, None
+    return sale_price, regular_price, discount_percent
+
 def get_footlocker_deals():
     search_url = "https://www.footlocker.com/search?query=nike%20air%20max%201"
     variant_url_format = "https://www.footlocker.com/product/~/{0}.html"
@@ -74,12 +113,12 @@ def get_footlocker_deals():
     # XPaths for details panel elements.
     details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
     product_num_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
-    # We'll now use extract_supplier_sku() instead of a fixed XPath.
+    # We extract supplier SKU via extract_supplier_sku().
     
-    # Price selectors using CSS (based on provided HTML snippet)
+    # Price selectors using CSS (based on provided HTML snippet):
     sale_price_css = "div.ProductPrice span.ProductPrice-final"
     regular_price_css = "div.ProductPrice span.ProductPrice-original"
-    discount_percent_css = "div.ProductPrice div.ProductPrice-percent"
+    discount_css = "div.ProductPrice div.ProductPrice-percent"
     
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
@@ -96,7 +135,7 @@ def get_footlocker_deals():
         driver.get(search_url)
         time.sleep(8)
         
-        # Handle cookie consent.
+        # Handle cookie consent if present.
         try:
             WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'accept') or contains(@id, 'accept')]"))
@@ -105,7 +144,7 @@ def get_footlocker_deals():
             time.sleep(2)
         except Exception:
             print("ℹ️ No cookie consent dialog found or couldn't be closed")
-            
+        
         product_cards = WebDriverWait(driver, 15).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
@@ -130,6 +169,7 @@ def get_footlocker_deals():
                 driver.get(prod_url)
                 time.sleep(8)
                 
+                # Extract product title (with multiple fallbacks)
                 try:
                     product_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
                 except Exception:
@@ -217,32 +257,12 @@ def get_footlocker_deals():
                             print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}].")
                             continue
                         
-                        try:
-                            sale_price_text = driver.find_element(By.CSS_SELECTOR, sale_price_css).text.strip()
-                            sale_price = sale_price_text.replace("$", "").strip()
-                        except Exception as e:
-                            sale_price = None
-                        try:
-                            regular_price_text = driver.find_element(By.CSS_SELECTOR, regular_price_css).text.strip()
-                            regular_price = regular_price_text.replace("$", "").strip()
-                        except Exception as e:
-                            regular_price = None
-                        try:
-                            discount_percent = driver.find_element(By.CSS_SELECTOR, discount_percent_css).text.strip()
-                        except Exception as e:
-                            discount_percent = None
-                        
-                        try:
-                            sale_price = float(sale_price) if sale_price else None
-                            regular_price = float(regular_price) if regular_price else None
-                        except:
-                            sale_price, regular_price = None, None
+                        sale_price, regular_price, discount_percent = get_price_info(driver, sale_price_css, regular_price_css, discount_css)
                         
                         print("Extracted Sale Price:", sale_price)
                         print("Extracted Regular Price:", regular_price)
                         print("Extracted Discount Percent:", discount_percent)
                         
-                        # Attempt to extract product title from variant page as fallback.
                         try:
                             fl_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
                         except:
