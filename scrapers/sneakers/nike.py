@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_nike_deals():
-    # Nike search URL with query and view type (if needed)
+    # Nike search URL with query and view type.
     search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
     
     # Set up Selenium WebDriver.
@@ -36,7 +36,9 @@ def get_nike_deals():
         # Handle cookie consent if present.
         try:
             WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Accept') or contains(@id,'accept')]"))
+                EC.element_to_be_clickable(
+                    (By.XPATH, "//button[contains(text(),'Accept') or contains(@id,'accept')]")
+                )
             ).click()
             print("✅ Clicked on cookie consent button")
             time.sleep(2)
@@ -53,14 +55,13 @@ def get_nike_deals():
         product_urls = []
         for card in product_cards:
             try:
-                # Extract product URL from the overlay link.
                 url = card.find_element(By.CSS_SELECTOR, "a.product-card__link-overlay[data-testid='product-card__link-overlay']").get_attribute("href")
                 product_urls.append(url)
             except Exception as e:
                 print(f"⚠️ Error extracting product URL: {e}")
         print("Extracted product URLs:", product_urls)
         
-        # Process each product URL (for example, the first 3 products).
+        # Process each product URL (e.g., the first 3 products).
         for idx, prod_url in enumerate(product_urls[:3], start=1):
             try:
                 print(f"\n🔄 Processing Nike product [{idx}]...")
@@ -75,7 +76,7 @@ def get_nike_deals():
                     prod_title = "Unknown Nike Product"
                     print(f"⚠️ Could not extract product title: {e}")
                 
-                # Extract base variant price info from the product page.
+                # Extract base variant price info.
                 try:
                     sale_price = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text.strip()
                 except Exception:
@@ -90,7 +91,7 @@ def get_nike_deals():
                     discount_percent = ""
                 print("Base Price Info:", sale_price, regular_price, discount_percent)
                 
-                # Derive the base style from the product URL.
+                # Derive the base style from the product URL (last segment).
                 base_style = prod_url.rstrip("/").split("/")[-1]
                 print("Base Style:", base_style)
                 
@@ -109,24 +110,27 @@ def get_nike_deals():
                 # Look for the colorway picker container.
                 try:
                     colorway_container = driver.find_element(By.ID, "colorway-picker-container")
-                    colorway_links = colorway_container.find_elements(By.TAG_NAME, "a")
-                    num_colorways = len(colorway_links)
+                    colorway_link_elements = colorway_container.find_elements(By.TAG_NAME, "a")
+                    # Extract hrefs from the links immediately to avoid stale element references.
+                    colorway_hrefs = []
+                    for link in colorway_link_elements:
+                        href = link.get_attribute("href")
+                        if href:
+                            # Convert relative URLs if needed.
+                            if not href.startswith("http"):
+                                href = "https://www.nike.com" + href
+                            colorway_hrefs.append(href)
+                    num_colorways = len(colorway_hrefs)
                     print(f"🎨 Found {num_colorways} colorways for product [{idx}].")
                 except Exception as e:
                     print(f"⚠️ No colorway picker found; defaulting to base variant. Error: {e}")
+                    colorway_hrefs = []
                     num_colorways = 0
-                    colorway_links = []
                 
-                # Process each colorway variant (if available).
+                # Process each colorway variant.
                 colorway_index = 1
-                for link in colorway_links:
+                for variant_url in colorway_hrefs:
                     try:
-                        variant_href = link.get_attribute("href")
-                        # Construct full URL if necessary.
-                        if not variant_href.startswith("http"):
-                            variant_url = "https://www.nike.com" + variant_href
-                        else:
-                            variant_url = variant_href
                         colorway_index += 1
                         print(f"\n🔄 Processing colorway variant [{colorway_index}] - URL: {variant_url}")
                         driver.get(variant_url)
@@ -146,7 +150,7 @@ def get_nike_deals():
                         except Exception:
                             variant_discount = ""
                         
-                        # Extract the variant style from the URL.
+                        # Derive variant style from the variant URL.
                         variant_style = variant_url.rstrip("/").split("/")[-1]
                         print("Variant Style:", variant_style)
                         print("Variant Price Info:", variant_sale_price, variant_regular_price, variant_discount)
@@ -166,7 +170,7 @@ def get_nike_deals():
                         traceback.print_exc()
                         
             except Exception as e:
-                print(f"⚠️ Error processing Nike product [{idx}]: {e}")
+                print(f"⚠️ Error processing Nike product [{idx}]:", e)
                 traceback.print_exc()
                 
     except Exception as e:
