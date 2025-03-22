@@ -11,16 +11,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_nike_deals():
-    search_url = "https://www.nike.com/w?q=air+max+1"
-    # Selectors for Nike details.
-    details_tab_xpath = "//button[contains(@id, 'pdp-tab-details')]"  # Assumed selector for a Details tab
-    details_panel_xpath = "//div[contains(@class, 'product-details-panel')]"  # Container for details
-    style_number_xpath = "//div[contains(@class, 'product-details-panel')]/span[1]"  # Base style number element
-    sale_price_css = "span[data-testid='currentPrice-container']"
-    regular_price_css = "span[data-testid='initialPrice-container']"
-    discount_percent_css = "span[data-testid='OfferPercentage']"
-    colorway_buttons_class = "ColorwaySelector"  # Assumed class for colorway buttons
-
+    # Nike search URL with query and view type (if needed)
+    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+    
     # Set up Selenium WebDriver.
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
@@ -43,198 +36,147 @@ def get_nike_deals():
         # Handle cookie consent if present.
         try:
             WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, "//button[contains(text(),'Accept') or contains(@id,'accept')]")
-                )
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Accept') or contains(@id,'accept')]"))
             ).click()
             print("✅ Clicked on cookie consent button")
             time.sleep(2)
         except Exception:
             print("ℹ️ No cookie consent dialog found")
         
-        # Get product cards from search results.
-        product_cards = WebDriverWait(driver, 15).until(
-            EC.presence_of_all_elements_located((By.CLASS_NAME, "product-card"))
-        )
+        # Get product cards from the search results.
+        product_cards = driver.find_elements(By.CSS_SELECTOR, "div.product-card[data-testid='product-card']")
         if not product_cards:
-            print("⚠️ No products found on Nike.")
+            print("⚠️ No products found on Nike search")
             return deals
-        print(f"🔎 Found {len(product_cards)} products on Nike.")
+        print(f"🔎 Found {len(product_cards)} products on Nike search")
         
         product_urls = []
-        for card in product_cards[:3]:
+        for card in product_cards:
             try:
-                product_url = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__link-overlay']").get_attribute("href")
-                product_urls.append(product_url)
+                # Extract product URL from the overlay link.
+                url = card.find_element(By.CSS_SELECTOR, "a.product-card__link-overlay[data-testid='product-card__link-overlay']").get_attribute("href")
+                product_urls.append(url)
             except Exception as e:
                 print(f"⚠️ Error extracting product URL: {e}")
         print("Extracted product URLs:", product_urls)
         
-        # Process each product URL.
-        for idx, prod_url in enumerate(product_urls, start=1):
+        # Process each product URL (for example, the first 3 products).
+        for idx, prod_url in enumerate(product_urls[:3], start=1):
             try:
-                print(f"\n🔄 Processing product [{idx}]...")
+                print(f"\n🔄 Processing Nike product [{idx}]...")
                 driver.get(prod_url)
                 time.sleep(8)
                 
                 # Extract product title.
                 try:
-                    prod_title = WebDriverWait(driver, 8).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "h1#pdp_product_title"))
-                    ).text.strip()
-                    print(f"📝 Product Title: {prod_title}")
-                except Exception:
-                    try:
-                        prod_title = driver.find_element(By.CSS_SELECTOR, "h1[data-testid='product_title']").text.strip()
-                    except Exception as e:
-                        prod_title = f"Product {idx}"
-                        print(f"⚠️ Could not extract product title, using '{prod_title}'")
-                
-                # Attempt to click the Details tab, if available.
-                try:
-                    details_tab = driver.find_element(By.XPATH, details_tab_xpath)
-                    driver.execute_script("arguments[0].click();", details_tab)
-                    print("✅ Clicked on Details tab")
-                    time.sleep(3)
-                except Exception:
-                    print("ℹ️ Details tab not found or already open")
-                
-                # Extract the base style number.
-                try:
-                    base_text = driver.find_element(By.XPATH, style_number_xpath).text.strip()
+                    prod_title = driver.find_element(By.CSS_SELECTOR, "h1[data-testid='product_title']").text.strip()
+                    print("📝 Product Title:", prod_title)
                 except Exception as e:
-                    base_text = ""
-                    print(f"⚠️ Could not extract base style number: {e}")
-                base_style = base_text
+                    prod_title = "Unknown Nike Product"
+                    print(f"⚠️ Could not extract product title: {e}")
+                
+                # Extract base variant price info from the product page.
+                try:
+                    sale_price = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text.strip()
+                except Exception:
+                    sale_price = ""
+                try:
+                    regular_price = driver.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text.strip()
+                except Exception:
+                    regular_price = ""
+                try:
+                    discount_percent = driver.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
+                except Exception:
+                    discount_percent = ""
+                print("Base Price Info:", sale_price, regular_price, discount_percent)
+                
+                # Derive the base style from the product URL.
+                base_style = prod_url.rstrip("/").split("/")[-1]
                 print("Base Style:", base_style)
                 
-                # Find colorway buttons.
-                try:
-                    colorway_buttons = WebDriverWait(driver, 10).until(
-                        EC.presence_of_all_elements_located((By.CLASS_NAME, colorway_buttons_class))
-                    )
-                    num_colorways = len(colorway_buttons)
-                    print(f"🎨 Found {num_colorways} colorways for product [{idx}].")
-                except Exception:
-                    print(f"⚠️ No colorways found for product [{idx}]. Using default style.")
-                    num_colorways = 1
-                    colorway_buttons = [None]
+                # Record the base variant as a deal.
+                deals.append({
+                    "store": "Nike",
+                    "product_name": prod_title,
+                    "product_url": prod_url,
+                    "style_number": base_style,
+                    "sale_price": sale_price,
+                    "regular_price": regular_price,
+                    "discount_percent": discount_percent,
+                    "colorway_index": 1
+                })
                 
-                # Process each colorway.
-                for color_index in range(num_colorways):
+                # Look for the colorway picker container.
+                try:
+                    colorway_container = driver.find_element(By.ID, "colorway-picker-container")
+                    colorway_links = colorway_container.find_elements(By.TAG_NAME, "a")
+                    num_colorways = len(colorway_links)
+                    print(f"🎨 Found {num_colorways} colorways for product [{idx}].")
+                except Exception as e:
+                    print(f"⚠️ No colorway picker found; defaulting to base variant. Error: {e}")
+                    num_colorways = 0
+                    colorway_links = []
+                
+                # Process each colorway variant (if available).
+                colorway_index = 1
+                for link in colorway_links:
                     try:
-                        print(f"\n🔄 Processing colorway [{color_index+1}] for {prod_title}...")
-                        colorway_buttons = driver.find_elements(By.CLASS_NAME, colorway_buttons_class)
-                        if color_index >= len(colorway_buttons):
-                            print(f"⚠️ No colorway button at index {color_index+1}. Skipping.")
-                            continue
-                        color_button = colorway_buttons[color_index]
-                        
-                        # Extract variant style from the colorway image.
-                        try:
-                            c_img = color_button.find_element(By.TAG_NAME, "img")
-                            c_src = c_img.get_attribute("src")
-                            pn_patterns = [r"/([A-Z0-9]{6,10})\?", r"_([A-Z0-9]{6,10})_", r"-([A-Z0-9]{6,10})-"]
-                            variant_style = None
-                            for pat in pn_patterns:
-                                m = re.search(pat, c_src)
-                                if m:
-                                    variant_style = m.group(1)
-                                    break
-                        except Exception as e:
-                            print(f"⚠️ Error extracting variant style: {e}")
-                            traceback.print_exc()
-                            variant_style = f"UNKNOWN-{color_index+1}"
-                        if not variant_style:
-                            variant_style = f"UNKNOWN-{color_index+1}"
-                        print("Variant Style:", variant_style)
-                        
-                        # Click the colorway thumbnail.
-                        try:
-                            actions = ActionChains(driver)
-                            actions.move_to_element(color_button).click().perform()
-                            print(f"✅ Clicked on colorway [{color_index+1}] using ActionChains")
-                        except Exception as e:
-                            print(f"⚠️ ActionChains click failed: {e}")
-                            driver.execute_script("arguments[0].click();", color_button)
-                            print(f"✅ Clicked on colorway [{color_index+1}] using JavaScript fallback")
-                        
-                        driver.execute_script("window.dispatchEvent(new Event('resize'));")
-                        time.sleep(15)
-                        
-                        # Re-read updated style number.
-                        try:
-                            updated_text = driver.find_element(By.XPATH, style_number_xpath).text.strip()
-                        except Exception as e:
-                            updated_text = ""
-                            print(f"⚠️ Could not re-read updated style number: {e}")
-                        updated_style = updated_text if updated_text else base_style
-                        print("Updated Style:", updated_style)
-                        
-                        # If updated style differs, assume a variant URL change.
-                        if updated_style and updated_style != base_style:
-                            variant_url = prod_url.replace(base_style, updated_style)
-                            print("Navigating to variant URL:", variant_url)
-                            driver.get(variant_url)
-                            time.sleep(8)
-                            try:
-                                details_tab = driver.find_element(By.XPATH, details_tab_xpath)
-                                driver.execute_script("arguments[0].click();", details_tab)
-                                print("✅ Clicked on Details tab on variant page")
-                                time.sleep(3)
-                            except Exception:
-                                print("ℹ️ Details tab not found or already open on variant page")
+                        variant_href = link.get_attribute("href")
+                        # Construct full URL if necessary.
+                        if not variant_href.startswith("http"):
+                            variant_url = "https://www.nike.com" + variant_href
                         else:
-                            print("Base style remains; using current page for variant")
+                            variant_url = variant_href
+                        colorway_index += 1
+                        print(f"\n🔄 Processing colorway variant [{colorway_index}] - URL: {variant_url}")
+                        driver.get(variant_url)
+                        time.sleep(8)
                         
-                        # Extract price information.
+                        # Extract price info from the variant page.
                         try:
-                            sale_price = driver.find_element(By.CSS_SELECTOR, sale_price_css).text.strip()
+                            variant_sale_price = driver.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text.strip()
                         except Exception:
-                            sale_price = ""
+                            variant_sale_price = ""
                         try:
-                            regular_price = driver.find_element(By.CSS_SELECTOR, regular_price_css).text.strip()
+                            variant_regular_price = driver.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text.strip()
                         except Exception:
-                            regular_price = ""
+                            variant_regular_price = ""
                         try:
-                            discount_percent = driver.find_element(By.CSS_SELECTOR, discount_percent_css).text.strip()
+                            variant_discount = driver.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
                         except Exception:
-                            discount_percent = ""
-                        print("Extracted Sale Price:", sale_price)
-                        print("Extracted Regular Price:", regular_price)
-                        print("Extracted Discount Percent:", discount_percent)
+                            variant_discount = ""
+                        
+                        # Extract the variant style from the URL.
+                        variant_style = variant_url.rstrip("/").split("/")[-1]
+                        print("Variant Style:", variant_style)
+                        print("Variant Price Info:", variant_sale_price, variant_regular_price, variant_discount)
                         
                         deals.append({
                             "store": "Nike",
                             "product_name": prod_title,
-                            "product_url": prod_url,
-                            "style_number": updated_style if updated_style else base_style,
-                            "sale_price": sale_price,
-                            "regular_price": regular_price,
-                            "discount_percent": discount_percent,
-                            "colorway_index": color_index + 1
+                            "product_url": variant_url,
+                            "style_number": variant_style,
+                            "sale_price": variant_sale_price,
+                            "regular_price": variant_regular_price,
+                            "discount_percent": variant_discount,
+                            "colorway_index": colorway_index
                         })
-                        print("✅ Stored Style:", updated_style if updated_style else base_style)
-                    
                     except Exception as e:
-                        print(f"⚠️ Error processing colorway [{color_index+1}]:", e)
+                        print(f"⚠️ Error processing variant colorway: {e}")
                         traceback.print_exc()
                         
-                time.sleep(5)
-                
             except Exception as e:
-                print(f"⚠️ Error processing product [{idx}]:", e)
+                print(f"⚠️ Error processing Nike product [{idx}]: {e}")
                 traceback.print_exc()
                 
     except Exception as e:
-        print("⚠️ Main process error:", e)
+        print("⚠️ Main Nike process error:", e)
         traceback.print_exc()
     finally:
         driver.quit()
     
     print("\nSUMMARY RESULTS:")
-    print(f"Total Nike products processed: {len(deals)}")
-    
+    print(f"Total Nike deals processed: {len(deals)}")
     return deals
 
 if __name__ == "__main__":
