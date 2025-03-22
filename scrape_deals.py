@@ -7,7 +7,7 @@ def format_deal(deal, source):
     """
     Returns a formatted string:
     Product Title | Identifier | Sale Price | Regular Price | Discount % | Product URL
-    For Nike, identifier is now the style_number; for Foot Locker, it's the supplier_sku.
+    For Nike, the identifier is the style_number; for Foot Locker, it's the supplier_sku.
     """
     if not deal:
         return "No deal found."
