@@ -63,7 +63,7 @@ def get_nike_deals():
     finally:
         driver.quit()
     
-    # Process a limited number of products (e.g., first 3) to reduce runtime
+    # Process a limited number of products (first 3) to reduce runtime
     for idx, prod_url in enumerate(product_urls[:3], start=1):
         try:
             print(f"\n🔄 Processing Nike product [{idx}]...")
@@ -135,7 +135,7 @@ def get_nike_deals():
                 print(f"⚠️ No colorway picker found; defaulting to base product. Error: {e}")
                 colorway_hrefs = []
             driver.quit()
-            # Process each variant URL (skip index 0 as that is base)
+            # Process each variant URL from the list (skip index 0 as that is base)
             for color_index in range(1, len(colorway_hrefs)):
                 variant_url = colorway_hrefs[color_index]
                 try:
