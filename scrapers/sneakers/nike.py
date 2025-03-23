@@ -17,7 +17,9 @@ def init_driver():
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                         "AppleWebKit/537.36 (KHTML, like Gecko) "
+                         "Chrome/90.0.4430.212 Safari/537.36")
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_window_size(1920, 1080)
     return driver
@@ -61,6 +63,7 @@ def get_nike_deals():
     finally:
         driver.quit()
     
+    # Process a limited number of products (e.g., first 3) to reduce runtime
     for idx, prod_url in enumerate(product_urls[:3], start=1):
         try:
             print(f"\n🔄 Processing Nike product [{idx}]...")
@@ -72,7 +75,7 @@ def get_nike_deals():
                 print("📝 Product Title:", prod_title)
             except Exception as e:
                 prod_title = f"Product {idx}"
-                print(f"⚠️ Could not extract product title, using '{prod_title}'")
+                print(f"⚠️ Could not extract product title, using '{prod_title}':", e)
             try:
                 details_tab = driver.find_element(By.XPATH, details_tab_xpath)
                 driver.execute_script("arguments[0].click();", details_tab)
@@ -93,7 +96,6 @@ def get_nike_deals():
             except Exception:
                 discount_percent = ""
             print("Base Price Info:", sale_price, regular_price, discount_percent)
-            # Derive the base style from the product URL
             base_style = prod_url.rstrip("/").split("/")[-1]
             print("Base Style:", base_style)
             deals.append({
@@ -114,8 +116,7 @@ def get_nike_deals():
                 print(f"⚠️ No colorways found for product [{idx}].")
                 num_colorways = 0
             driver.quit()
-            # Process each variant from the colorway links (extracted from the page)
-            # Instead of using WebElements (which may go stale), extract hrefs from the colorway container.
+            # Extract variant URLs from the colorway picker container
             driver = init_driver()
             driver.get(prod_url)
             time.sleep(5)
@@ -134,7 +135,7 @@ def get_nike_deals():
                 print(f"⚠️ No colorway picker found; defaulting to base product. Error: {e}")
                 colorway_hrefs = []
             driver.quit()
-            # Process each variant URL from the list (skip the base variant, which is index 0)
+            # Process each variant URL (skip index 0 as that is base)
             for color_index in range(1, len(colorway_hrefs)):
                 variant_url = colorway_hrefs[color_index]
                 try:
@@ -148,7 +149,6 @@ def get_nike_deals():
                         continue
                     time.sleep(5)
                     try:
-                        # Click on details tab on variant page if needed
                         details_tab = driver.find_element(By.XPATH, details_tab_xpath)
                         driver.execute_script("arguments[0].click();", details_tab)
                         print("✅ Clicked on Details tab on variant page")
