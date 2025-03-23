@@ -45,6 +45,7 @@ def match_and_compare(nike_deals, footlocker_deals, target_style_number):
     """
     Matches a Nike product (by style_number) with a Foot Locker product (by supplier_sku).
     Returns the matching Nike product, Foot Locker product, the cheaper store, and price difference.
+    Also prints all Foot Locker cleaned SKUs for debugging.
     """
     target = target_style_number.upper().strip()
     nike_product = None
@@ -56,14 +57,19 @@ def match_and_compare(nike_deals, footlocker_deals, target_style_number):
             nike_product = prod
             break
 
-    # Find matching Foot Locker product by cleaned supplier_sku.
+    # Gather and print all cleaned Foot Locker SKUs.
+    footlocker_skus = []
     for prod in footlocker_deals:
         sku = prod.get("supplier_sku", "")
         sku_clean = clean_supplier_sku(sku)
+        footlocker_skus.append(sku_clean)
+        # If one matches exactly, pick this product.
         if sku_clean == target:
             footlocker_product = prod
-            break
-
+    print("Debug: Foot Locker SKUs found:")
+    for sku in footlocker_skus:
+        print(" -", sku)
+        
     nike_price = effective_price(nike_product)
     fl_price = effective_price(footlocker_product)
 
