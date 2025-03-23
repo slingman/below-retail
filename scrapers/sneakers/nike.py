@@ -1,108 +1,129 @@
 import time
-import requests
-from bs4 import BeautifulSoup
+import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
-
-def get_nike_colorways(base_url):
+def create_driver():
     options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+    return driver
 
-    print(f"🔍 Fetching base product page: {base_url}")
-    driver.get(base_url)
-    time.sleep(2)
-
-    # Accept cookie banner if present
+def extract_colorway_style_id(driver):
     try:
-        consent_button = WebDriverWait(driver, 3).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept All Cookies')]"))
-        )
-        consent_button.click()
-        print("✅ Cookie consent accepted")
-    except:
+        style_text = driver.find_element(By.XPATH, "//li[contains(text(),'Style:')]").text
+        return style_text.replace("Style:", "").strip()
+    except NoSuchElementException:
+        return None
+
+def extract_prices(driver):
+    try:
+        price_container = driver.find_element(By.ID, "price-container")
+        prices = price_container.find_elements(By.XPATH, ".//span[contains(@data-testid, 'Price')]")
+        price = sale_price = None
+        if len(prices) == 1:
+            price = prices[0].text.strip()
+        elif len(prices) > 1:
+            sale_price = prices[0].text.strip()
+            price = prices[1].text.strip()
+        return price, sale_price
+    except NoSuchElementException:
+        return None, None
+
+def extract_product_title(driver):
+    try:
+        return driver.find_element(By.XPATH, "//h1[@data-testid='product_title']").text.strip()
+    except NoSuchElementException:
+        return None
+
+def extract_colorways(driver):
+    colorways = []
+    try:
+        colorway_links = driver.find_elements(By.XPATH, "//a[contains(@data-testid, 'colorway-link-')]")
+        for link in colorway_links:
+            href = link.get_attribute("href")
+            if href:
+                colorways.append(href)
+    except NoSuchElementException:
+        pass
+    return list(set(colorways))
+
+def scrape_nike():
+    driver = create_driver()
+    base_search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+    print("\nFetching Nike deals...")
+    driver.get(base_search_url)
+
+    # Handle cookie banner if present
+    try:
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "gen-nav-commerce-cookie-banner-accept-button"))).click()
+        print("✅ Accepted cookie consent")
+    except TimeoutException:
         print("ℹ️ No cookie consent dialog found")
 
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    time.sleep(3)
 
-    # Extract base product info
-    product_title = soup.find('h1', {'data-testid': 'product_title'})
-    product_title = product_title.text.strip() if product_title else 'N/A'
+    product_links = []
+    product_cards = driver.find_elements(By.XPATH, "//a[@data-testid='product-card__link-overlay']")
+    print(f"🔎 Found {len(product_cards)} products on Nike search")
+    for card in product_cards:
+        href = card.get_attribute("href")
+        if href and href.startswith("https://www.nike.com/t/"):
+            product_links.append(href)
 
-    style_id_tag = soup.find('li', {'data-testid': 'product-description-style-color'})
-    base_style_id = style_id_tag.text.strip().replace("Style: ", "") if style_id_tag else 'N/A'
+    product_links = list(set(product_links))
+    print(f"Extracted product URLs: {product_links[:25]}")
 
-    current_price_tag = soup.find('span', {'data-testid': 'currentPrice-container'})
-    sale_price = current_price_tag.text.strip() if current_price_tag else 'N/A'
+    all_deals = []
+    for idx, url in enumerate(product_links[:10]):
+        print(f"\n🔄 Processing Nike product [{idx+1}]...")
+        driver.get(url)
+        time.sleep(2)
 
-    original_price_tag = soup.find('span', {'data-testid': 'initialPrice-container'})
-    original_price = original_price_tag.text.strip() if original_price_tag else sale_price
+        base_product_name = extract_product_title(driver)
+        base_style_id = extract_colorway_style_id(driver)
+        base_price, base_sale_price = extract_prices(driver)
 
-    print("\n🎯 Base Product Info")
-    print(f"Name: {product_title}")
-    print(f"Style ID: {base_style_id}")
-    print(f"Price: {original_price}")
-    if original_price != sale_price:
-        print(f"Sale Price: {sale_price}")
+        print(f"📝 Product Title: {base_product_name}")
+        print(f"Base Style: {base_style_id}")
+        print(f"Base Price Info: {base_price} {'| Sale: ' + base_sale_price if base_sale_price else ''}")
 
-    # Get all colorways from the base page
-    colorway_links = soup.select('a[data-testid^="colorway-link"]')
-    colorway_urls = [f"https://www.nike.com{a['href']}" for a in colorway_links]
-    unique_colorways = list(set(colorway_urls))
+        all_colorways = extract_colorways(driver)
+        colorway_deals = []
 
-    colorway_data = []
-    print("\n🎨 Fetching other colorways:")
-    for idx, url in enumerate(unique_colorways):
-        try:
-            driver.get(url)
+        for cw_url in all_colorways:
+            driver.get(cw_url)
             time.sleep(1.5)
-            swatch = BeautifulSoup(driver.page_source, 'html.parser')
-
-            title = swatch.find('h1', {'data-testid': 'product_title'})
-            title = title.text.strip() if title else 'N/A'
-
-            style_id = swatch.find('li', {'data-testid': 'product-description-style-color'})
-            style_id = style_id.text.strip().replace("Style: ", "") if style_id else 'N/A'
-
-            current_price = swatch.find('span', {'data-testid': 'currentPrice-container'})
-            sale = current_price.text.strip() if current_price else 'N/A'
-
-            original = swatch.find('span', {'data-testid': 'initialPrice-container'})
-            retail = original.text.strip() if original else sale
-
-            colorway_data.append({
-                'style_id': style_id,
-                'price': retail,
-                'sale_price': sale if sale != retail else None
+            style_id = extract_colorway_style_id(driver)
+            price, sale_price = extract_prices(driver)
+            colorway_deals.append({
+                "url": cw_url,
+                "style_id": style_id,
+                "price": price,
+                "sale_price": sale_price
             })
 
-            print(f"[{idx+1}] Style ID: {style_id}, Price: {retail}, Sale Price: {sale if sale != retail else 'N/A'}")
-
-        except Exception as e:
-            print(f"⚠️ Error fetching colorway at {url}: {e}")
-            continue
+        all_deals.append({
+            "product_name": base_product_name,
+            "style_id": base_style_id,
+            "price": base_price,
+            "sale_price": base_sale_price,
+            "url": url,
+            "colorways": colorway_deals
+        })
 
     driver.quit()
 
-    return {
-        'base_product': {
-            'title': product_title,
-            'style_id': base_style_id,
-            'price': original_price,
-            'sale_price': sale_price if original_price != sale_price else None,
-        },
-        'other_colorways': colorway_data
-    }
+    print("\nSUMMARY RESULTS:")
+    print(f"Total Nike deals processed: {len(all_deals)}")
+    return all_deals
 
-
-# Example usage:
-if __name__ == "__main__":
-    base_url = "https://www.nike.com/t/air-max-1-essential-mens-shoes-2C5sX2/FZ5808-400"
-    result = get_nike_colorways(base_url)
-    print("\n✅ Done fetching Nike product variants.")
+def get_nike_deals():
+    return scrape_nike()
