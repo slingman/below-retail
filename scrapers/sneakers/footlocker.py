@@ -26,14 +26,9 @@ def get_element_text(driver, xpath):
     try:
         elem = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, xpath)))
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-        # Short sleep to allow minor animations to complete
-        time.sleep(1)
-        text = elem.text.strip()
-        if not text:
-            text = elem.get_attribute("innerText").strip()
-        return text
-    except Exception as e:
-        print(f"⚠️ Warning: Could not get text from {xpath}. Returning empty string.")
+        return elem.text.strip() or elem.get_attribute("innerText").strip()
+    except Exception:
+        print(f"⚠️ Warning: Could not get text from {xpath}.")
         return ""
 
 def extract_product_number(text):
@@ -61,12 +56,12 @@ def open_details_tab(driver, details_panel_xpath):
             try:
                 tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
                 driver.execute_script("arguments[0].click();", tab)
-                print("✅ Clicked on 'Details' section to open it")
+                print("✅ Clicked on 'Details' tab")
                 WebDriverWait(driver, 5).until(EC.visibility_of(panel))
             except Exception:
-                print("⚠️ Could not click the Details tab; proceeding anyway")
+                print("⚠️ Could not click Details tab; proceeding anyway")
         else:
-            print("🔄 'Details' section is already open")
+            print("🔄 Details tab already open")
     except Exception:
         print("⚠️ Details panel not found; proceeding anyway")
 
@@ -75,6 +70,7 @@ def process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpa
     deal = None
     try:
         driver.get(prod_url)
+        # Wait for the base product number element
         WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, product_num_xpath)))
         open_details_tab(driver, details_panel_xpath)
         base_text = get_element_text(driver, product_num_xpath)
@@ -86,13 +82,12 @@ def process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpa
             return None
         color_button = colorway_buttons[color_index]
         try:
-            actions = ActionChains(driver)
-            actions.move_to_element(color_button).click().perform()
+            ActionChains(driver).move_to_element(color_button).click().perform()
             print(f"✅ Clicked on colorway [{color_index+1}]")
         except Exception as e:
             print(f"⚠️ ActionChains click failed: {e}")
             driver.execute_script("arguments[0].click();", color_button)
-        # Wait until the product number changes (up to 10 seconds)
+        # Wait until the product number updates
         WebDriverWait(driver, 10).until(lambda d: extract_product_number(get_element_text(d, product_num_xpath)) != base_prod)
         updated_text = get_element_text(driver, product_num_xpath)
         updated_prod = extract_product_number(updated_text)
@@ -103,11 +98,11 @@ def process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpa
             driver.get(variant_url)
             open_details_tab(driver, details_panel_xpath)
         else:
-            print("Base product remains; using current page for variant")
+            print("Base product remains; using current page")
         supplier_sku = extract_supplier_sku(driver)
         print("Extracted Supplier SKU:", supplier_sku)
         if not supplier_sku:
-            print(f"⚠️ Could not extract Supplier SKU for colorway [{color_index+1}].")
+            print(f"⚠️ No SKU extracted for colorway [{color_index+1}].")
             return None
         sale_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-final')]")
         regular_price = get_element_text(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-original')]")
@@ -152,7 +147,8 @@ def get_footlocker_deals():
             print("⚠️ No products found on Foot Locker.")
             return deals
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
-        # Process all product cards (or adjust to a certain limit)
+        # Limit processing to first 10 product cards to reduce runtime
+        product_cards = product_cards[:10]
         product_urls = []
         for card in product_cards:
             try:
@@ -167,14 +163,16 @@ def get_footlocker_deals():
     finally:
         driver.quit()
     
+    # Process each product URL sequentially
     for idx, prod_url in enumerate(product_urls, start=1):
         try:
             print(f"\n🔄 Processing product [{idx}]...")
             driver = init_driver()
             driver.get(prod_url)
-            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.product-title")))
             try:
-                prod_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
+                prod_title = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "h1.product-title"))
+                ).text.strip()
             except Exception:
                 prod_title = f"Product {idx}"
                 print(f"⚠️ Could not extract product title, using '{prod_title}'")
@@ -200,7 +198,8 @@ def get_footlocker_deals():
                     deal["product_title"] = prod_title
                     deals.append(deal)
                 else:
-                    print(f"⚠️ Skipping colorway [{color_index+1}] for product [{idx}] due to error.")
+                    print(f"⚠️ Skipping colorway [{color_index+1}] for product [{idx}].")
+                time.sleep(1)
         except Exception as e:
             print(f"⚠️ Error processing product [{idx}]:", e)
             traceback.print_exc()
@@ -213,4 +212,4 @@ if __name__ == "__main__":
     deals = get_footlocker_deals()
     print("\nFinal Foot Locker Deals:")
     for i, deal in enumerate(deals, 1):
-        print(f"{i}. {deal['product_title']} (SKU: {deal['supplier_sku']}, Product #: {deal['product_number']}, Sale Price: {deal['sale_price']}, Regular Price: {deal['regular_price']}, Discount: {deal['discount_percent']})")
+        print(f"{i}. {deal.get('product_title', 'N/A')} (SKU: {deal.get('supplier_sku', 'N/A')}, Product #: {deal.get('product_number', 'N/A')}, Sale Price: {deal.get('sale_price', 'N/A')}, Regular Price: {deal.get('regular_price', 'N/A')}, Discount: {deal.get('discount_percent', 'N/A')})")
