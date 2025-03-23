@@ -1,154 +1,133 @@
 import time
-import re
-from typing import List, Dict
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
-from bs4 import BeautifulSoup
-
-BASE_URL = "https://www.nike.com"
-SEARCH_URL = f"{BASE_URL}/w?q=air%20max%201&vst=air%20max%201"
-
-
-def extract_price(price_str: str) -> float:
-    price_num = re.sub(r"[^\d.]", "", price_str)
-    try:
-        return float(price_num)
-    except ValueError:
-        return 0.0
+from utils.common import extract_price
 
 
 def create_driver():
     options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
+    options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     service = Service(ChromeDriverManager().install())
-    return webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=service, options=options)
+    return driver
 
 
-def get_product_links(driver: webdriver.Chrome) -> List[str]:
-    print("\nFetching Nike deals...")
-    driver.get(SEARCH_URL)
-    time.sleep(4)
-
+def accept_cookies(driver):
     try:
-        consent_button = driver.find_element(By.ID, "hf_cookie_text_btn_accept")
+        consent_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Accept All Cookies')]")
         consent_button.click()
-        print("✅ Accepted cookie consent")
-    except Exception:
+        time.sleep(1)
+    except NoSuchElementException:
         print("ℹ️ No cookie consent dialog found")
 
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    product_cards = soup.find_all("div", class_="product-card")
-    print(f"🔎 Found {len(product_cards)} products on Nike search")
 
-    product_links = []
-    for card in product_cards:
-        link = card.find("a", class_="product-card__link-overlay")
-        if link and link.get("href") and "/t/" in link["href"]:
-            href = link["href"]
-            if href.startswith("http"):
-                product_links.append(href)
-            else:
-                product_links.append(BASE_URL + href)
+def extract_variant_info(driver):
+    try:
+        style = driver.find_element(By.CSS_SELECTOR, '[data-test="product-style-colorway"]').text.strip()
+    except NoSuchElementException:
+        style = "N/A"
 
-    product_links = list(set(product_links))
-    print(f"Extracted product URLs: {product_links[:25]}")
-    return product_links[:10]
+    try:
+        title = driver.find_element(By.CSS_SELECTOR, '[data-test="product-title"]').text.strip()
+    except NoSuchElementException:
+        title = "N/A"
 
+    try:
+        sale_price_elem = driver.find_element(By.CSS_SELECTOR, '[data-test="product-price-reduced"]')
+        sale_price = extract_price(sale_price_elem.text)
+    except NoSuchElementException:
+        sale_price = None
 
-def parse_product_page(driver: webdriver.Chrome, url: str) -> Dict:
-    driver.get(url)
-    time.sleep(2)
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-
-    title_tag = soup.find("h1", {"data-testid": "product_title"})
-    subtitle_tag = soup.find("h2", {"data-testid": "product_subtitle"})
-    base_title = title_tag.text.strip() if title_tag else ""
-    subtitle = subtitle_tag.text.strip() if subtitle_tag else ""
-
-    description_ul = soup.find("ul", class_=re.compile(".*nds-list.*"))
-    base_style_id = ""
-    if description_ul:
-        for li in description_ul.find_all("li"):
-            if "Style:" in li.text:
-                base_style_id = li.text.replace("Style:", "").strip()
-                break
-
-    price_container = soup.find("div", id="price-container")
-    price = sale_price = 0.0
-    if price_container:
-        price_tag = price_container.find("span", {"data-testid": "currentPrice-container"})
-        sale_tag = price_container.find("span", {"data-testid": "initialPrice-container"})
-        if price_tag:
-            price = extract_price(price_tag.text)
-        if sale_tag:
-            sale_price = extract_price(sale_tag.text)
-
-    colorways = []
-    color_picker = soup.find("div", id="colorway-picker-container")
-    if color_picker:
-        for a_tag in color_picker.find_all("a", href=True):
-            href = a_tag["href"]
-            style_id_match = re.search(r"/([A-Z0-9]+-[0-9]{3,})", href)
-            if style_id_match:
-                color_style_id = style_id_match.group(1)
-                color_url = BASE_URL + href if not href.startswith("http") else href
-
-                # Open colorway URL and extract price info
-                driver.get(color_url)
-                time.sleep(1.5)
-                color_soup = BeautifulSoup(driver.page_source, "html.parser")
-                color_price = color_sale = 0.0
-                color_price_tag = color_soup.find("span", {"data-testid": "currentPrice-container"})
-                color_sale_tag = color_soup.find("span", {"data-testid": "initialPrice-container"})
-                if color_price_tag:
-                    color_price = extract_price(color_price_tag.text)
-                if color_sale_tag:
-                    color_sale = extract_price(color_sale_tag.text)
-
-                colorways.append({
-                    "style_id": color_style_id,
-                    "url": color_url,
-                    "price": color_price,
-                    "sale_price": color_sale
-                })
+    try:
+        full_price_elem = driver.find_element(By.CSS_SELECTOR, '[data-test="product-price"]')
+        full_price = extract_price(full_price_elem.text)
+    except NoSuchElementException:
+        full_price = None
 
     return {
-        "title": base_title,
-        "subtitle": subtitle,
-        "style_id": base_style_id,
-        "price": price,
-        "sale_price": sale_price,
-        "url": url,
-        "colorways": colorways
+        "style_id": style,
+        "title": title,
+        "price": full_price,
+        "sale_price": sale_price
     }
 
 
-def scrape_nike() -> List[Dict]:
-    driver = create_driver()
-    product_links = get_product_links(driver)
+def parse_product_page(driver, url):
+    driver.get(url)
+    time.sleep(2)
 
-    all_deals = []
-    for i, url in enumerate(product_links):
-        print(f"\n🔄 Processing Nike product [{i+1}]...")
+    variant_data = []
+
+    # Accept cookies if shown
+    accept_cookies(driver)
+
+    # Check for other colorways
+    colorway_links = []
+    try:
+        colorway_elems = driver.find_elements(By.CSS_SELECTOR, 'a[data-test="product-colorway"]')
+        colorway_links = [elem.get_attribute("href") for elem in colorway_elems if elem.get_attribute("href")]
+    except NoSuchElementException:
+        pass
+
+    all_urls = list(set([url] + colorway_links))
+
+    for link in all_urls:
+        driver.get(link)
+        time.sleep(2)
+        data = extract_variant_info(driver)
+        data["url"] = link
+        variant_data.append(data)
+
+    return variant_data
+
+
+def scrape_nike():
+    driver = create_driver()
+    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+    driver.get(search_url)
+    time.sleep(3)
+
+    accept_cookies(driver)
+
+    product_links = []
+    try:
+        product_elements = driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
+        product_links = [elem.get_attribute("href") for elem in product_elements if elem.get_attribute("href")]
+        print(f"🔎 Found {len(product_links)} products on Nike search")
+    except NoSuchElementException:
+        print("❌ No products found on Nike search page")
+
+    # Remove duplicates and only keep Air Max 1
+    product_links = list(set(filter(lambda u: "air-max-1" in u.lower(), product_links)))
+    print("Extracted product URLs:", product_links)
+
+    results = []
+
+    for idx, url in enumerate(product_links[:10], start=1):  # Limit to 10 for now
+        print(f"\n🔄 Processing Nike product [{idx}]...")
         try:
-            data = parse_product_page(driver, url)
-            print(f"📝 Product Title: {data['title']}")
-            print(f"Base Style: {data['style_id']}")
-            print(f"Base Price Info:  ${data['price']} → ${data['sale_price'] if data['sale_price'] else data['price']}")
-            print(f"Other Colorways: {len(data['colorways'])} variants")
-            all_deals.append(data)
+            variants = parse_product_page(driver, url)
+            if variants:
+                title = variants[0]["title"]
+                print(f"📝 Product Title: {title}")
+                print(f"Style Variants:")
+                for v in variants:
+                    price_info = f"${v['sale_price']} → ${v['price']}" if v["sale_price"] else f"${v['price']}"
+                    print(f" - {v['style_id']}: {price_info}")
+                    v["title"] = title  # unify title
+                    results.append(v)
         except Exception as e:
-            print(f"❌ Error processing {url}: {e}")
-            continue
+            print(f"❌ Failed to process product at {url}: {e}")
 
     driver.quit()
-    print(f"\nSUMMARY RESULTS:\nTotal Nike deals processed: {len(all_deals)}")
-    return all_deals
+    print(f"\nSUMMARY RESULTS:\nTotal Nike deals processed: {len(results)}\n")
+    return results
 
 
 def get_nike_deals():
