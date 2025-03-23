@@ -49,7 +49,7 @@ def get_nike_deals():
                         product_title = "Unknown Product Title"
                         print(f"⚠️ Could not extract product title: {e}")
 
-                style_id = prod_url.split("/")[-1]
+                style_id = prod_url.rstrip("/").split("/")[-1]
                 print(f"✅ Nike Style ID Extracted: {style_id}")
 
                 try:
