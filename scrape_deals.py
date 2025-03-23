@@ -4,19 +4,11 @@ from scrapers.sneakers.nike import get_nike_deals
 from scrapers.sneakers.footlocker import get_footlocker_deals
 
 def clean_supplier_sku(sku):
-    """
-    Removes any prefix like "Supplier-sku #:" from the SKU and converts to uppercase.
-    """
     if sku:
         return sku.replace("Supplier-sku #:", "").strip().upper()
     return sku
 
 def format_deal(deal, source):
-    """
-    Returns a formatted string:
-    Product Title | Identifier | Sale Price | Regular Price | Discount % | Product URL
-    For Nike, the identifier is the style_number; for Foot Locker, it's the cleaned supplier_sku.
-    """
     if not deal:
         return "No deal found."
     if source.lower() == "nike":
@@ -34,45 +26,30 @@ def format_deal(deal, source):
     return f"{title} | {identifier} | {sale} | {regular} | {discount} | {url}"
 
 def effective_price(product):
-    """
-    Returns the effective price: sale price if available, else regular price.
-    """
     if product is None:
         return None
     return product.get("sale_price") if product.get("sale_price") not in (None, "") else product.get("regular_price")
 
 def match_and_compare(nike_deals, footlocker_deals, target_style_number):
-    """
-    Matches a Nike product (by style_number) with a Foot Locker product (by supplier_sku).
-    Returns the matching Nike product, Foot Locker product, the cheaper store, and price difference.
-    Also prints all Foot Locker cleaned SKUs for debugging.
-    """
     target = target_style_number.upper().strip()
     nike_product = None
     footlocker_product = None
-
-    # Find matching Nike product by style_number.
+    footlocker_skus = []
     for prod in nike_deals:
         if prod.get("style_number", "").upper().strip() == target:
             nike_product = prod
             break
-
-    # Gather and print all cleaned Foot Locker SKUs.
-    footlocker_skus = []
     for prod in footlocker_deals:
         sku = prod.get("supplier_sku", "")
         sku_clean = clean_supplier_sku(sku)
         footlocker_skus.append(sku_clean)
-        # If one matches exactly, pick this product.
         if sku_clean == target:
             footlocker_product = prod
     print("Debug: Foot Locker SKUs found:")
     for sku in footlocker_skus:
         print(" -", sku)
-        
     nike_price = effective_price(nike_product)
     fl_price = effective_price(footlocker_product)
-
     if nike_price not in (None, "") and fl_price not in (None, ""):
         try:
             nike_price_val = float(nike_price)
@@ -80,7 +57,6 @@ def match_and_compare(nike_deals, footlocker_deals, target_style_number):
         except ValueError:
             nike_price_val = None
             fl_price_val = None
-
         if nike_price_val is not None and fl_price_val is not None:
             if nike_price_val < fl_price_val:
                 cheaper_store = "Nike"
@@ -97,29 +73,23 @@ def match_and_compare(nike_deals, footlocker_deals, target_style_number):
     else:
         cheaper_store = "Price not available for comparison"
         price_diff = None
-
     return nike_product, footlocker_product, cheaper_store, price_diff
 
 def main():
     print("\nFetching Nike deals...")
     nike_deals = get_nike_deals()
     print(f"Fetched {len(nike_deals)} Nike deals.")
-
     print("\nFetching Foot Locker deals...")
     footlocker_deals = get_footlocker_deals()
     print(f"Fetched {len(footlocker_deals)} Foot Locker deals.")
-
     print("\n===== Nike Deals =====")
     for deal in nike_deals:
         print(format_deal(deal, "Nike"))
-    
     print("\n===== Foot Locker Deals =====")
     for deal in footlocker_deals:
         print(format_deal(deal, "Foot Locker"))
-    
     TARGET_STYLE_NUMBER = "FZ5808-400"
     nike_prod, fl_prod, cheaper_store, price_diff = match_and_compare(nike_deals, footlocker_deals, TARGET_STYLE_NUMBER)
-
     print("\n==================== Matched Product Comparison ====================")
     print(f"Target Style Number: {TARGET_STYLE_NUMBER}\n")
     print("Nike Deal:")
@@ -130,7 +100,6 @@ def main():
     if price_diff is not None:
         print("Price Difference: $", price_diff)
     print("====================================================================\n")
-
     result = {
         "nike": nike_prod if nike_prod else None,
         "footlocker": fl_prod if fl_prod else None,
@@ -139,7 +108,6 @@ def main():
     }
     with open("deals.json", "w") as file:
         json.dump(result, file, indent=4)
-    
     print("✅ Done fetching and comparing sneaker deals!")
 
 if __name__ == "__main__":
