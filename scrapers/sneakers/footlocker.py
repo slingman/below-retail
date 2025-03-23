@@ -26,7 +26,11 @@ def get_element_text(driver, xpath):
     try:
         elem = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, xpath)))
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-        return elem.text.strip() or elem.get_attribute("innerText").strip()
+        time.sleep(1)
+        text = elem.text.strip()
+        if not text:
+            text = elem.get_attribute("innerText").strip()
+        return text
     except Exception:
         print(f"⚠️ Warning: Could not get text from {xpath}.")
         return ""
@@ -70,7 +74,6 @@ def process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpa
     deal = None
     try:
         driver.get(prod_url)
-        # Wait for the base product number element
         WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, product_num_xpath)))
         open_details_tab(driver, details_panel_xpath)
         base_text = get_element_text(driver, product_num_xpath)
@@ -87,10 +90,15 @@ def process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpa
         except Exception as e:
             print(f"⚠️ ActionChains click failed: {e}")
             driver.execute_script("arguments[0].click();", color_button)
-        # Wait until the product number updates
-        WebDriverWait(driver, 10).until(lambda d: extract_product_number(get_element_text(d, product_num_xpath)) != base_prod)
-        updated_text = get_element_text(driver, product_num_xpath)
-        updated_prod = extract_product_number(updated_text)
+        driver.execute_script("window.dispatchEvent(new Event('resize'));")
+        # Wait until the product number updates or timeout after 10 seconds.
+        try:
+            WebDriverWait(driver, 10).until(lambda d: extract_product_number(get_element_text(d, product_num_xpath)) != base_prod)
+            updated_text = get_element_text(driver, product_num_xpath)
+            updated_prod = extract_product_number(updated_text)
+        except Exception:
+            print("⚠️ Timeout waiting for product number update; assuming base product remains")
+            updated_prod = base_prod
         print("Updated Product Number:", updated_prod)
         if updated_prod and updated_prod != base_prod:
             variant_url = f"https://www.footlocker.com/product/~/{updated_prod}.html"
@@ -147,7 +155,7 @@ def get_footlocker_deals():
             print("⚠️ No products found on Foot Locker.")
             return deals
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
-        # Limit processing to first 10 product cards to reduce runtime
+        # Limit to first 10 products to reduce runtime.
         product_cards = product_cards[:10]
         product_urls = []
         for card in product_cards:
@@ -163,7 +171,6 @@ def get_footlocker_deals():
     finally:
         driver.quit()
     
-    # Process each product URL sequentially
     for idx, prod_url in enumerate(product_urls, start=1):
         try:
             print(f"\n🔄 Processing product [{idx}]...")
