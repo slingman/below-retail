@@ -24,8 +24,9 @@ def init_driver():
 
 def get_element_text(driver, xpath):
     try:
-        elem = driver.find_element(By.XPATH, xpath)
+        elem = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, xpath)))
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+        # Short sleep to allow minor animations to complete
         time.sleep(1)
         text = elem.text.strip()
         if not text:
@@ -55,13 +56,13 @@ def extract_supplier_sku(driver):
 
 def open_details_tab(driver, details_panel_xpath):
     try:
-        panel = driver.find_element(By.XPATH, details_panel_xpath)
+        panel = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, details_panel_xpath)))
         if "open" not in panel.get_attribute("class"):
             try:
                 tab = driver.find_element(By.XPATH, "//button[contains(@id, 'ProductDetails-tabs-details-tab')]")
                 driver.execute_script("arguments[0].click();", tab)
                 print("✅ Clicked on 'Details' section to open it")
-                time.sleep(3)
+                WebDriverWait(driver, 5).until(EC.visibility_of(panel))
             except Exception:
                 print("⚠️ Could not click the Details tab; proceeding anyway")
         else:
@@ -70,20 +71,15 @@ def open_details_tab(driver, details_panel_xpath):
         print("⚠️ Details panel not found; proceeding anyway")
 
 def process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpath):
-    """
-    Processes a single colorway variant in its own driver session.
-    """
     driver = init_driver()
     deal = None
     try:
         driver.get(prod_url)
-        time.sleep(8)
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, product_num_xpath)))
         open_details_tab(driver, details_panel_xpath)
-        time.sleep(3)
         base_text = get_element_text(driver, product_num_xpath)
         base_prod = extract_product_number(base_text)
         print("Base Product Number:", base_prod)
-        # Get all colorway buttons on this product page.
         colorway_buttons = driver.find_elements(By.CLASS_NAME, "ColorwayStyles-field")
         if color_index >= len(colorway_buttons):
             print(f"⚠️ No colorway button at index {color_index+1}.")
@@ -96,19 +92,16 @@ def process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpa
         except Exception as e:
             print(f"⚠️ ActionChains click failed: {e}")
             driver.execute_script("arguments[0].click();", color_button)
-        driver.execute_script("window.dispatchEvent(new Event('resize'));")
-        time.sleep(15)
+        # Wait until the product number changes (up to 10 seconds)
+        WebDriverWait(driver, 10).until(lambda d: extract_product_number(get_element_text(d, product_num_xpath)) != base_prod)
         updated_text = get_element_text(driver, product_num_xpath)
         updated_prod = extract_product_number(updated_text)
         print("Updated Product Number:", updated_prod)
-        # If the updated product number differs, navigate to the variant URL.
         if updated_prod and updated_prod != base_prod:
             variant_url = f"https://www.footlocker.com/product/~/{updated_prod}.html"
             print("Navigating to variant URL:", variant_url)
             driver.get(variant_url)
-            time.sleep(8)
             open_details_tab(driver, details_panel_xpath)
-            time.sleep(3)
         else:
             print("Base product remains; using current page for variant")
         supplier_sku = extract_supplier_sku(driver)
@@ -142,28 +135,26 @@ def get_footlocker_deals():
     details_panel_xpath = "//div[@id='ProductDetails-tabs-details-panel']"
     product_num_xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
     deals = []
-    # Use one driver to get product URLs.
     driver = init_driver()
     try:
         driver.get(search_url)
-        time.sleep(8)
         try:
             WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Accept') or contains(@id,'accept')]"))
             ).click()
             print("✅ Clicked cookie consent")
-            time.sleep(2)
         except Exception:
             print("ℹ️ No cookie consent dialog found")
-        product_cards = WebDriverWait(driver, 15).until(
+        product_cards = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "ProductCard"))
         )
         if not product_cards:
             print("⚠️ No products found on Foot Locker.")
             return deals
         print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
+        # Process all product cards (or adjust to a certain limit)
         product_urls = []
-        for card in product_cards[:3]:
+        for card in product_cards:
             try:
                 url = card.find_element(By.CLASS_NAME, "ProductCard-link").get_attribute("href")
                 product_urls.append(url)
@@ -181,7 +172,7 @@ def get_footlocker_deals():
             print(f"\n🔄 Processing product [{idx}]...")
             driver = init_driver()
             driver.get(prod_url)
-            time.sleep(8)
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.product-title")))
             try:
                 prod_title = driver.find_element(By.CSS_SELECTOR, "h1.product-title").text.strip()
             except Exception:
@@ -189,12 +180,11 @@ def get_footlocker_deals():
                 print(f"⚠️ Could not extract product title, using '{prod_title}'")
             print("📝 Product Title:", prod_title)
             open_details_tab(driver, details_panel_xpath)
-            time.sleep(3)
             base_text = get_element_text(driver, product_num_xpath)
             base_prod = extract_product_number(base_text)
             print("Base Product Number:", base_prod)
             try:
-                colorway_buttons = WebDriverWait(driver, 10).until(
+                colorway_buttons = WebDriverWait(driver, 5).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "ColorwayStyles-field"))
                 )
                 num_colorways = len(colorway_buttons)
@@ -202,8 +192,7 @@ def get_footlocker_deals():
             except Exception:
                 print(f"⚠️ No colorways found for product [{idx}]. Using default style.")
                 num_colorways = 1
-            driver.quit()  # Close the driver used for base info.
-            
+            driver.quit()
             for color_index in range(num_colorways):
                 print(f"\n🔄 Processing colorway [{color_index+1}] for {prod_title}...")
                 deal = process_colorway(prod_url, color_index, details_panel_xpath, product_num_xpath)
@@ -212,7 +201,6 @@ def get_footlocker_deals():
                     deals.append(deal)
                 else:
                     print(f"⚠️ Skipping colorway [{color_index+1}] for product [{idx}] due to error.")
-                time.sleep(3)
         except Exception as e:
             print(f"⚠️ Error processing product [{idx}]:", e)
             traceback.print_exc()
