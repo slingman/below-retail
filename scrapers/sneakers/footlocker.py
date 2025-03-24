@@ -1,166 +1,133 @@
 import time
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from utils.common import extract_price
 
-
 def create_driver():
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    return webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
 
+def extract_product_urls(driver):
+    search_url = "https://www.footlocker.com/search?query=air%20max%201"
+    driver.get(search_url)
+    WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, "//a[contains(@href, '/product/')]")))
+    product_links = driver.find_elements(By.XPATH, "//a[contains(@href, '/product/')]")
+    urls = list({link.get_attribute("href") for link in product_links if link.get_attribute("href")})
+    return urls
 
-def get_footlocker_deals():
-    driver = create_driver()
-    base_url = "https://www.footlocker.com/search?query=air%20max%201"
+def get_text_safe(driver, xpath):
+    try:
+        return driver.find_element(By.XPATH, xpath).text.strip()
+    except:
+        return None
 
-    print("\nFetching Foot Locker deals...")
-    driver.get(base_url)
+def extract_title(driver):
+    try:
+        return driver.find_element(By.CLASS_NAME, "ProductDetails-title").text.strip()
+    except:
+        return None
+
+def extract_supplier_sku(driver):
+    xpath = "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
+    text = get_text_safe(driver, xpath)
+    return text if text and "-" in text else None
+
+def extract_prices(driver):
+    current_price = get_text_safe(driver, "//span[contains(@class,'ProductPrice-final')]")
+    original_price = get_text_safe(driver, "//span[contains(@class,'ProductPrice-original')]")
+    discount = get_text_safe(driver, "//div[contains(@class,'ProductPrice-percent')]")
+    return extract_price(current_price), extract_price(original_price), discount
+
+def extract_colorways(driver):
+    try:
+        color_buttons = driver.find_elements(By.XPATH, "//ul[contains(@class,'ProductColorways')]//button")
+        return color_buttons
+    except:
+        return []
+
+def process_colorway(driver, base_url, color_btn, index):
+    try:
+        driver.execute_script("arguments[0].scrollIntoView(true);", color_btn)
+        color_btn.click()
+        time.sleep(2)
+        product_num = get_text_safe(driver, "//div[@id='ProductDetails-tabs-details-panel']/span[2]")
+        if not product_num:
+            print(f"⚠️ Could not fetch product number for colorway [{index}]")
+            return None
+        variant_url = f"https://www.footlocker.com/product/~/"+product_num+".html"
+        driver.get(variant_url)
+        time.sleep(1)
+    except:
+        print(f"⚠️ Skipping colorway [{index}] due to error.")
+        return None
+
+    sku = extract_supplier_sku(driver)
+    price, orig_price, discount = extract_prices(driver)
+    return {
+        "style_id": sku,
+        "price": price,
+        "original_price": orig_price,
+        "discount": discount
+    }
+
+def parse_product_page(driver, url, index):
+    print(f"\n🔄 Processing Foot Locker product [{index + 1}]...")
+    driver.get(url)
     time.sleep(2)
 
-    try:
-        cookie_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler"))
-        )
-        cookie_button.click()
-    except:
-        print("ℹ️ No cookie consent dialog found")
+    title = extract_title(driver)
+    base_product_number = url.split("/")[-1].replace(".html", "")
+    if not title:
+        print(f"⚠️ Could not extract product title, using 'Product {index + 1}'")
+        title = f"Product {index + 1}"
 
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CLASS_NAME, "ProductCard"))
-    )
-    product_cards = driver.find_elements(By.CLASS_NAME, "ProductCard")
-    print(f"🔎 Found {len(product_cards)} products on Foot Locker.")
+    print(f"📝 Product Title: {title}")
+    print(f"Base Product Number: {base_product_number}")
 
-    product_urls = []
-    for card in product_cards:
-        try:
-            link = card.find_element(By.CSS_SELECTOR, "a.ProductCard-link")
-            product_urls.append(link.get_attribute("href"))
-        except:
+    color_buttons = extract_colorways(driver)
+    print(f"🎨 Found {len(color_buttons)} colorways for product [{index + 1}].")
+
+    variants = []
+    for idx, btn in enumerate(color_buttons):
+        variant = process_colorway(driver, url, btn, idx + 1)
+        if variant:
+            variants.append(variant)
+
+    print("Style Variants:")
+    for v in variants:
+        if not v["style_id"]:
             continue
+        line = f" - {v['style_id']}: ${v['price']}"
+        if v['original_price']:
+            line += f" → ${v['original_price']}"
+        if v['discount']:
+            line += f" ({v['discount']})"
+        print(line)
 
-    print(f"Extracted product URLs: {product_urls[:10]}{'...' if len(product_urls) > 10 else ''}\n")
+    return variants
 
+def get_footlocker_deals():
+    print("\nFetching Foot Locker deals...")
+    driver = create_driver()
     deals = []
-    seen_skus = set()
 
-    for idx, url in enumerate(product_urls[:10]):
-        print(f"🔄 Processing Foot Locker product [{idx + 1}]...")
-        driver.get(url)
-        time.sleep(2)
+    try:
+        urls = extract_product_urls(driver)
+        print(f"🔎 Found {len(urls)} products on Foot Locker.")
+        print("Extracted product URLs:", urls[:10], "..." if len(urls) > 10 else "")
 
-        try:
-            title = driver.find_element(By.CLASS_NAME, "ProductDetails-title").text.strip()
-        except:
-            title = f"Product {idx + 1}"
-            print(f"⚠️ Could not extract product title, using '{title}'")
+        for idx, url in enumerate(urls[:10]):
+            variants = parse_product_page(driver, url, idx)
+            deals.extend(variant for variant in variants if variant.get("style_id"))
+    finally:
+        driver.quit()
 
-        print(f"📝 Product Title: {title}")
-
-        try:
-            details_tab = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Details')]"))
-            )
-            details_tab.click()
-            print("✅ Clicked on 'Details' tab")
-        except:
-            print("⚠️ Warning: Could not click 'Details' tab")
-
-        try:
-            base_number = driver.current_url.split("/")[-1].replace(".html", "")
-        except:
-            base_number = "Unknown"
-
-        print(f"Base Product Number: {base_number}")
-
-        variant_buttons = driver.find_elements(By.CSS_SELECTOR, "div.ColorSwatch")
-        print(f"🎨 Found {len(variant_buttons)} colorways for product [{idx + 1}].")
-
-        variant_data = []
-
-        for v_idx, button in enumerate(variant_buttons):
-            print(f"\n🔄 Processing colorway [{v_idx + 1}] for {title}...")
-            try:
-                details_tab = WebDriverWait(driver, 3).until(
-                    EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Details')]"))
-                )
-                details_tab.click()
-            except:
-                pass
-
-            time.sleep(1)
-
-            # Click variant
-            try:
-                driver.execute_script("arguments[0].click();", button)
-            except:
-                print("⚠️ Failed to click colorway")
-                continue
-
-            # Wait for product number to update
-            new_number = base_number
-            try:
-                WebDriverWait(driver, 5).until(
-                    lambda d: d.current_url.split("/")[-1].replace(".html", "") != base_number
-                )
-                new_number = driver.current_url.split("/")[-1].replace(".html", "")
-            except:
-                print("⚠️ Timeout waiting for product number update; assuming base product remains")
-
-            if new_number != base_number:
-                variant_url = f"https://www.footlocker.com/product/~/{new_number}.html"
-                print(f"Updated Product Number: {new_number}")
-                print(f"Navigating to variant URL: {variant_url}")
-                driver.get(variant_url)
-                time.sleep(1)
-                try:
-                    details_tab = WebDriverWait(driver, 3).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Details')]"))
-                    )
-                    details_tab.click()
-                except:
-                    pass
-
-            try:
-                supplier_sku = driver.find_element(By.XPATH, "//div[contains(text(),'Style')]/following-sibling::div").text.strip()
-                print(f"Extracted Supplier SKU: {supplier_sku}")
-            except:
-                supplier_sku = "N/A"
-
-            # Extract price info
-            price = extract_price(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-final')]")
-            original = extract_price(driver, "//div[contains(@class, 'ProductPrice')]//span[contains(@class, 'ProductPrice-original')]")
-            discount = extract_price(driver, "//div[contains(@class, 'ProductPrice-percent')]")
-
-            if price or original:
-                print(f"Price Info: {price} {original or ''} {discount or ''}")
-            else:
-                print("⚠️ Warning: Could not extract price info.")
-                price = original = discount = None
-
-            if supplier_sku not in seen_skus:
-                seen_skus.add(supplier_sku)
-                variant_data.append({
-                    "title": title,
-                    "style_id": supplier_sku,
-                    "price": price,
-                    "retail_price": original,
-                    "discount": discount
-                })
-
-        deals.extend(variant_data)
-
-    driver.quit()
-
-    print(f"\nSUMMARY RESULTS:")
-    print(f"Total products with unique SKUs found: {len(deals)}\n")
-    print(f"Fetched {len(deals)} Foot Locker deals.\n")
-
+    print(f"\nFetched {len(deals)} Foot Locker deals.\n")
     return deals
