@@ -1,26 +1,26 @@
 from scrapers.sneakers.nike import get_nike_deals
 from scrapers.sneakers.footlocker import get_footlocker_deals
 
+# Fetch Nike deals
 print("\nFetching Nike deals...")
 nike_deals = get_nike_deals()
 
-nike_unique_products = len(set(d['style_id'].split("-")[0] for d in nike_deals))
-nike_total_variants = len(nike_deals)
-nike_on_sale = sum(1 for d in nike_deals if d.get("discount"))
+# Print Nike summary
+flat_nike_deals = [variant for product in nike_deals for variant in product.get("variants", [])]
+nike_unique_products = len(nike_deals)
+nike_total_variants = len(flat_nike_deals)
+nike_variants_on_sale = sum(
+    1 for d in flat_nike_deals if d.get("sale_price") and d.get("price") and d["sale_price"] < d["price"]
+)
 
-print("\nNIKE SUMMARY:")
+print("\nSUMMARY RESULTS:")
 print(f"Total unique Nike products: {nike_unique_products}")
 print(f"Total Nike variants: {nike_total_variants}")
-print(f"Nike variants on sale: {nike_on_sale}")
+print(f"Nike variants on sale: {nike_variants_on_sale}")
 
+# Fetch Foot Locker deals
 print("\nFetching Foot Locker deals...")
 footlocker_deals = get_footlocker_deals()
 
-fl_unique_products = len(set(d["style_id"] for d in footlocker_deals))
-fl_total_variants = len(footlocker_deals)
-fl_on_sale = sum(1 for d in footlocker_deals if d.get("discount"))
-
-print("\nFOOT LOCKER SUMMARY:")
-print(f"Total unique Foot Locker products: {fl_unique_products}")
-print(f"Total Foot Locker variants: {fl_total_variants}")
-print(f"Foot Locker variants on sale: {fl_on_sale}")
+# Print Foot Locker summary
+print(f"\nFetched {len(footlocker_deals)} Foot Locker deals.")
