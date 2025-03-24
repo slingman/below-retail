@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import time
 import re
 import traceback
@@ -12,123 +11,135 @@ from webdriver_manager.chrome import ChromeDriverManager
 def create_driver():
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("user-agent=Mozilla/5.0")
-    service = Service(ChromeDriverManager().install())
-    return webdriver.Chrome(service=service, options=options)
+    options.add_argument("--disable-dev-shm-usage")
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-def get_element_text(driver, by, value, timeout=6):
+def get_text_safe(driver, xpath):
     try:
-        elem = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((by, value)))
-        return elem.text.strip()
-    except Exception:
-        return "N/A"
-
-def extract_price_info(driver):
-    current = get_element_text(driver, By.XPATH, "//div[@id='price-container']//span[@data-testid='currentPrice-container']")
-    regular = get_element_text(driver, By.XPATH, "//div[@id='price-container']//span[@data-testid='initialPrice-container']")
-    discount = get_element_text(driver, By.XPATH, "//div[@id='price-container']//span[@data-testid='OfferPercentage']")
-    return current, regular, discount
-
-def extract_style_id(driver):
-    try:
-        li = driver.find_element(By.XPATH, "//li[contains(text(),'Style:')]")
-        return li.text.split("Style:")[-1].strip()
+        return driver.find_element(By.XPATH, xpath).text.strip()
     except:
-        return "N/A"
+        return None
 
-def extract_variant_urls(driver):
-    links = []
+def extract_price_block(driver):
     try:
-        colorway_elements = driver.find_elements(By.XPATH, "//div[@id='colorway-picker-container']//a[@data-testid and contains(@href, '/t/')]")
-        for elem in colorway_elements:
-            href = elem.get_attribute("href")
-            if href and href.startswith("https://www.nike.com"):
-                links.append(href)
-    except Exception:
-        pass
-    return list(set(links))
+        price_block = driver.find_element(By.XPATH, "//div[@id='price-container']")
+        price_html = price_block.get_attribute("innerHTML")
+        sale_price = None
+        reg_price = None
 
-def parse_product_page(driver, url):
-    data = []
+        sale_match = re.search(r'data-testid="currentPrice-container">([^<]+)</span>', price_html)
+        if sale_match:
+            sale_price = sale_match.group(1).strip()
+
+        reg_match = re.search(r'data-testid="initialPrice-container"[^>]*>([^<]+)</span>', price_html)
+        if reg_match:
+            reg_price = reg_match.group(1).strip()
+
+        if not reg_price and sale_price:
+            reg_price = sale_price
+
+        return reg_price, sale_price
+    except:
+        return None, None
+
+def parse_variant(driver, url):
     try:
         driver.get(url)
         time.sleep(2)
-        title = get_element_text(driver, By.XPATH, "//h1[@data-testid='product_title']")
-        base_style = extract_style_id(driver)
-        current_price, regular_price, discount = extract_price_info(driver)
-        base_info = {
-            "product_url": url,
-            "title": title,
-            "style_id": base_style,
-            "price": current_price,
-            "regular_price": regular_price,
-            "discount": discount,
-            "is_base_product": True
+        title = get_text_safe(driver, "//h1[@data-testid='product_title']")
+        style = get_text_safe(driver, "//li[contains(@data-testid, 'product-description-style-color')]")
+        if style and ":" in style:
+            style = style.split(":")[-1].strip()
+        reg_price, sale_price = extract_price_block(driver)
+        return {
+            "variant_url": url,
+            "product_title": title,
+            "style_id": style,
+            "regular_price": reg_price,
+            "sale_price": sale_price
         }
-        data.append(base_info)
-
-        # Extract and visit colorway variants
-        variant_urls = extract_variant_urls(driver)
-        print(f"🟢 Found {len(variant_urls)} colorways")
-        for link in variant_urls:
-            if link == url:
-                continue  # skip base
-            try:
-                driver.get(link)
-                time.sleep(2)
-                variant_title = get_element_text(driver, By.XPATH, "//h1[@data-testid='product_title']")
-                variant_style = extract_style_id(driver)
-                v_price, v_regular, v_discount = extract_price_info(driver)
-                data.append({
-                    "product_url": link,
-                    "title": variant_title,
-                    "style_id": variant_style,
-                    "price": v_price,
-                    "regular_price": v_regular,
-                    "discount": v_discount,
-                    "is_base_product": False
-                })
-            except Exception as e:
-                print(f"⚠️ Failed to process variant: {link}")
-                traceback.print_exc()
     except Exception as e:
-        print(f"❌ Failed to parse base product: {url}")
+        print(f"⚠️ Error parsing variant page {url}: {e}")
+        return None
+
+def parse_product_page(driver, url):
+    driver.get(url)
+    time.sleep(2)
+
+    print(f"🔄 Processing Nike product: {url}")
+
+    product_title = get_text_safe(driver, "//h1[@data-testid='product_title']")
+    style_id = get_text_safe(driver, "//li[contains(@data-testid, 'product-description-style-color')]")
+    if style_id and ":" in style_id:
+        style_id = style_id.split(":")[-1].strip()
+    regular_price, sale_price = extract_price_block(driver)
+
+    print(f"📝 Product Title: {product_title}")
+    print(f"Base Style: {style_id}")
+    print(f"Base Price Info:  {sale_price or regular_price} → {regular_price if sale_price else 'None'}")
+
+    variants = []
+    try:
+        variant_links = driver.find_elements(By.XPATH, "//a[starts-with(@data-testid, 'colorway-link-')]")
+        print(f"Other Colorways: {len(variant_links)} variants")
+        for link in variant_links:
+            href = link.get_attribute("href")
+            if href and style_id not in href:
+                variant_info = parse_variant(driver, href)
+                if variant_info:
+                    variants.append(variant_info)
+    except Exception as e:
+        print("⚠️ Error extracting variants:", e)
         traceback.print_exc()
-    return data
+
+    return {
+        "product_url": url,
+        "product_title": product_title,
+        "style_id": style_id,
+        "regular_price": regular_price,
+        "sale_price": sale_price,
+        "variants": variants
+    }
 
 def get_nike_deals():
     search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
     driver = create_driver()
-    all_deals = []
+    deals = []
+
     try:
         driver.get(search_url)
-        time.sleep(3)
-        print("ℹ️ No cookie consent dialog found")
-        product_links = []
-        cards = driver.find_elements(By.XPATH, "//a[contains(@href, '/t/') and contains(@class, 'product-card__img-link-overlay')]")
-        for card in cards:
-            href = card.get_attribute("href")
-            if href and href.startswith("https://www.nike.com/t/") and href not in product_links:
-                product_links.append(href)
-        print(f"🔎 Found {len(product_links)} products on Nike search")
-        print("Extracted product URLs:", product_links[:10])
-        product_links = product_links[:10]  # limit for dev
+        time.sleep(2)
 
-        for i, url in enumerate(product_links, 1):
-            print(f"\n🔄 Processing Nike product [{i}]...")
-            deals = parse_product_page(driver, url)
-            all_deals.extend(deals)
+        try:
+            consent_button = driver.find_element(By.XPATH, "//button[contains(text(),'Accept')]")
+            consent_button.click()
+            print("✅ Clicked cookie consent")
+        except:
+            print("ℹ️ No cookie consent dialog found")
+
+        product_cards = driver.find_elements(By.XPATH, "//a[@data-testid='product-card__img-link-overlay']")
+        product_urls = [elem.get_attribute("href") for elem in product_cards if elem.get_attribute("href")]
+        print(f"🔎 Found {len(product_urls)} products on Nike search")
+        product_urls = list(dict.fromkeys(product_urls))  # remove duplicates
+        print("Extracted product URLs:", product_urls[:10])
+
+        for idx, url in enumerate(product_urls[:10], 1):
+            try:
+                data = parse_product_page(driver, url)
+                deals.append(data)
+                print("Style Variants:")
+                for v in data["variants"]:
+                    print(f" - {v['style_id']}: ${v['sale_price'] or v['regular_price']}")
+            except Exception as e:
+                print(f"⚠️ Error processing product {idx}: {e}")
+                traceback.print_exc()
+
     finally:
         driver.quit()
 
-    print("\nSUMMARY RESULTS:")
-    print(f"Total Nike deals processed: {len(all_deals)}")
-    return all_deals
+    print(f"\nSUMMARY RESULTS:\nTotal Nike deals processed: {len(deals)}\n")
+    return deals
 
 if __name__ == "__main__":
-    deals = get_nike_deals()
-    for deal in deals:
-        print(deal)
+    get_nike_deals()
