@@ -1,72 +1,54 @@
+# scrapers/sneakers/footlocker.py
+
+import time
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-import time
-import re
+from utils.common import extract_price
 
 
 def create_driver():
     options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    return webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
-
-
-def extract_price_info(driver):
-    try:
-        price_final = driver.find_element(By.XPATH, "//span[contains(@class, 'ProductPrice-final')]").text.strip()
-        price_original = driver.find_element(By.XPATH, "//span[contains(@class, 'ProductPrice-original')]").text.strip()
-        discount = driver.find_element(By.XPATH, "//div[contains(@class, 'ProductPrice-percent')]").text.strip()
-        return price_final, price_original, discount
-    except:
-        return None, None, None
+    options.add_argument('--headless=new')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    return webdriver.Chrome(driver=ChromeDriverManager().install(), options=options)
 
 
 def get_footlocker_deals():
-    search_url = "https://www.footlocker.com/search?query=air%20max%201"
     driver = create_driver()
-    driver.get(search_url)
+    deals = []
+    try:
+        print("\nFetching Foot Locker deals...")
+        search_url = "https://www.footlocker.com/search?query=air%20max%201"
+        driver.get(search_url)
+        time.sleep(5)
 
-    print("\nFetching Foot Locker deals...")
-    print("ℹ️ No cookie consent dialog found")
+        product_links = driver.find_elements(By.XPATH, "//a[contains(@href, '/product/')]")
+        urls = list({link.get_attribute("href").split("?")[0] for link in product_links})
+        print(f"🔎 Found {len(urls)} products on Foot Locker.")
+        print("Extracted product URLs:", urls[:10], "..." if len(urls) > 10 else "")
 
-    time.sleep(3)
-    product_links = []
-    cards = driver.find_elements(By.XPATH, "//a[contains(@href, '/product/')]")
-    seen = set()
-    for c in cards:
-        href = c.get_attribute("href")
-        if href and "/product/" in href and href not in seen:
-            product_links.append(href)
-            seen.add(href)
-
-    print(f"🔎 Found {len(product_links)} products on Foot Locker.")
-    print("Extracted product URLs:", product_links[:10], "..." if len(product_links) > 10 else "")
-
-    all_deals = []
-    for idx, link in enumerate(product_links[:10]):
-        print(f"\n🔄 Processing Foot Locker product [{idx + 1}]...")
-        try:
-            driver.get(link)
+        for i, url in enumerate(urls[:10]):
+            print(f"\n🔄 Processing Foot Locker product [{i + 1}]...")
+            driver.get(url)
             time.sleep(2)
 
             try:
-                title_el = driver.find_element(By.CLASS_NAME, "ProductName-primary")
-                subtitle_el = driver.find_element(By.CLASS_NAME, "ProductName-subtitle")
-                title = f"{title_el.text.strip()} {subtitle_el.text.strip()}"
+                title = driver.find_element(By.CLASS_NAME, "ProductName-primary").text
+                subtitle = driver.find_element(By.CLASS_NAME, "ProductName-subtitle").text
+                full_title = f"{title} {subtitle}".strip()
             except:
-                title = "N/A"
+                full_title = "N/A"
 
-            print(f"📝 Product Title: {title}")
+            print(f"📝 Product Title: {full_title}")
 
             try:
                 details_tab = WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='pdp-tab-details']"))
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Details')]"))
                 )
                 details_tab.click()
                 time.sleep(1)
@@ -75,44 +57,61 @@ def get_footlocker_deals():
                 continue
 
             try:
-                product_number = driver.find_element(
-                    By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']/span[1]"
-                ).text.strip()
-                style_match = re.search(r"Style:\s*(\w+-\w+)", driver.page_source)
-                style_id = style_match.group(1) if style_match else "N/A"
+                base_product_number = driver.current_url.split("/")[-1].replace(".html", "")
+                print(f"Base Product Number: {base_product_number}")
             except:
-                product_number = "N/A"
-                style_id = "N/A"
+                base_product_number = "N/A"
 
-            price_final, price_original, discount = extract_price_info(driver)
+            try:
+                colorway_buttons = driver.find_elements(By.XPATH, "//ul[contains(@class, 'ProductColorways')]//a")
+                print(f"🎨 Found {len(colorway_buttons)} colorways.")
+            except:
+                print("⚠️ Warning: Could not find colorways.")
+                continue
 
-            print(f"Base Product Number: {product_number}")
-            print(f"Style ID: {style_id}")
-            print(f"Price Info: {price_final} {price_original} {discount}")
+            for idx, btn in enumerate(colorway_buttons):
+                try:
+                    btn_href = btn.get_attribute("href")
+                    variant_url = btn_href if "/product/" in btn_href else f"https://www.footlocker.com/product/~/{btn_href.split('/')[-1]}"
+                    driver.get(variant_url)
+                    time.sleep(2)
 
-            all_deals.append({
-                "product_title": title,
-                "product_number": product_number,
-                "style_id": style_id,
-                "price": price_final,
-                "regular_price": price_original,
-                "discount": discount,
-                "url": link
-            })
+                    supplier_sku = driver.find_element(By.XPATH, "//div[@id='ProductDetails-tabs-details-panel']/span[1]").text.strip()
 
-        except Exception as e:
-            print(f"❌ Failed to process product [{idx + 1}]: {e}")
+                    try:
+                        current = extract_price(driver.find_element(By.XPATH, "//span[contains(@class, 'ProductPrice-final')]").text)
+                        original = extract_price(driver.find_element(By.XPATH, "//span[contains(@class, 'ProductPrice-original')]").text)
+                        discount = round((1 - (current / original)) * 100) if current < original else None
+                    except:
+                        current, original, discount = None, None, None
 
-    driver.quit()
+                    print(f" - {supplier_sku}: ${current} → ${original} ({f'{discount}% off' if discount else 'None'})")
+
+                    deals.append({
+                        "title": full_title,
+                        "product_number": base_product_number,
+                        "style_id": supplier_sku,
+                        "price": current,
+                        "retail_price": original,
+                        "discount_percent": discount,
+                        "url": variant_url,
+                        "source": "Foot Locker"
+                    })
+                except Exception as e:
+                    print(f"⚠️ Error processing colorway [{idx + 1}]: {e}")
+                    continue
+
+    finally:
+        driver.quit()
 
     # Summary
-    total = len(all_deals)
-    total_on_sale = sum(1 for d in all_deals if d["regular_price"] and d["price"] and d["price"] != d["regular_price"])
-    unique_styles = len(set(d["style_id"] for d in all_deals if d["style_id"] != "N/A"))
+    total_products = len(set(d['style_id'].split("-")[0] for d in deals if d['style_id']))
+    total_variants = len(deals)
+    sale_variants = sum(1 for d in deals if d['discount_percent'])
 
     print("\nSUMMARY RESULTS:")
-    print(f"Total unique Foot Locker products: {unique_styles}")
-    print(f"Total Foot Locker variants: {total}")
-    print(f"Foot Locker variants on sale: {total_on_sale}")
+    print(f"Total unique Foot Locker products: {total_products}")
+    print(f"Total Foot Locker variants: {total_variants}")
+    print(f"Foot Locker variants on sale: {sale_variants}\n")
 
-    return all_deals
+    return deals
