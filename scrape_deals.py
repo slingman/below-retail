@@ -1,41 +1,22 @@
-#!/usr/bin/env python3
-import time
-from scrapers.sneakers.nike import get_nike_deals
-from scrapers.sneakers.footlocker import get_footlocker_deals
+# scrape_deals.py
 
-def print_deal_summary(deals, store_name):
-    print(f"\nSUMMARY RESULTS:")
-    print(f"Total unique {store_name} products: {len(deals)}")
-    
-    variant_count = 0
-    sale_count = 0
-    for deal in deals:
-        if isinstance(deal, dict):
-            variant_count += 1
-            if deal.get("sale_price") and deal.get("regular_price"):
-                try:
-                    reg = float(str(deal["regular_price"]).replace("$", "").strip())
-                    sale = float(str(deal["sale_price"]).replace("$", "").strip())
-                    if sale < reg:
-                        sale_count += 1
-                except Exception:
-                    pass
-    print(f"Total {store_name} variants: {variant_count}")
-    print(f"{store_name} variants on sale: {sale_count}")
+from scrapers.sneakers.nike import get_nike_deals
 
 def main():
-    print("Fetching Nike deals...")
+    print("📦 Fetching Nike deals...")
     nike_deals = get_nike_deals()
-    print("\nFetching Nike deals complete.")
-    print_deal_summary(nike_deals, "Nike")
 
-    print("\nFetching Foot Locker deals...")
-    footlocker_deals = get_footlocker_deals()
-    print("\nFetching Foot Locker deals complete.")
-    print_deal_summary(footlocker_deals, "Foot Locker")
+    print("\n✅ Nike scraping complete.")
+    print(f"\nSUMMARY RESULTS:")
+    print(f"Total unique Nike products: {len(nike_deals)}")
 
-    all_deals = nike_deals + footlocker_deals
-    print(f"\nFetched {len(all_deals)} total sneaker deals.")
+    for idx, deal in enumerate(nike_deals, start=1):
+        print(f"{idx}. {deal.get('product_title')} ({deal.get('style_id')})")
+        if deal.get('sale_price') and deal.get('price'):
+            discount = 100 * (1 - deal['sale_price'] / deal['price'])
+            print(f"   🔥 ${deal['sale_price']} → ${deal['price']} ({round(discount)}% off)")
+        elif deal.get('price'):
+            print(f"   💵 ${deal['price']}")
 
 if __name__ == "__main__":
     main()
