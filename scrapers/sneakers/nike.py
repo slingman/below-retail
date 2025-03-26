@@ -1,145 +1,103 @@
-#!/usr/bin/env python3
 import time
-import re
+import traceback
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-def get_nike_deals():
-    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+from scrapers.utils import get_driver_with_stealth
 
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
-    )
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
 
-    deals = []
+def extract_price_info(driver):
     try:
-        driver.get(search_url)
-        time.sleep(5)
-
-        product_links = list(
-            set(
-                elem.get_attribute("href")
-                for elem in driver.find_elements(By.XPATH, "//a[contains(@href, '/t/air-max-1')]")
-                if elem.get_attribute("href")
-            )
+        price_container = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '[data-test="product-price"]'))
         )
+        price_text = price_container.text.strip().replace("\n", " ")
+        prices = price_text.replace("$", "").split(" ")
+        if len(prices) == 2:
+            sale_price = float(prices[0])
+            regular_price = float(prices[1])
+        else:
+            sale_price = None
+            regular_price = float(prices[0])
+        return {
+            "regular": regular_price,
+            "sale": sale_price,
+        }
+    except:
+        return {"regular": None, "sale": None}
 
-        print(f"🔎 Found {len(product_links)} products on Nike search")
-        print("Extracted product URLs:", product_links[:10])
+def extract_style_id_from_url(url):
+    return url.split("/")[-1]
 
-        for url in product_links[:10]:
+def get_nike_deals():
+    deals = []
+    driver = get_driver_with_stealth()
+    driver.get(NIKE_SEARCH_URL)
+    time.sleep(5)
+
+    product_cards = driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
+    product_urls = [a.get_attribute("href") for a in product_cards][:10]
+    print(f"🔎 Found {len(product_urls)} products on Nike search")
+    print("Extracted product URLs:", product_urls)
+
+    for url in product_urls:
+        try:
             print(f"\n🔄 Processing Nike product: {url}")
             driver.get(url)
-            time.sleep(4)
+            time.sleep(5)
 
             try:
-                title = driver.find_element(By.XPATH, "//h1").text.strip()
+                title_elem = WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "[data-test='product-title']"))
+                )
+                title = title_elem.text.strip()
             except:
                 title = "N/A"
 
-            try:
-                style_id = driver.find_element(By.XPATH, "//div[contains(text(),'Style:')]").text.split("Style:")[-1].strip()
-            except:
-                style_id = "N/A"
-
-            try:
-                price_container = driver.find_element(By.XPATH, "//div[@data-test='product-price']")
-                price_text = price_container.text.strip().replace("\n", " ")
-                prices = re.findall(r"\$[\d\.]+", price_text)
-                if len(prices) == 2:
-                    sale_price = prices[0]
-                    regular_price = prices[1]
-                elif len(prices) == 1:
-                    sale_price = None
-                    regular_price = prices[0]
-                else:
-                    sale_price = regular_price = None
-            except:
-                sale_price = regular_price = None
+            style_id = extract_style_id_from_url(url)
+            price_info = extract_price_info(driver)
 
             print(f"📝 Product Title: {title}")
             print(f"Base Style: {style_id}")
-            print(f"Base Price Info:  {f'${sale_price} → ${regular_price}' if sale_price else f'${regular_price}'}")
+            print(f"Base Price Info:  ${price_info['sale']} → ${price_info['regular']}")
 
-            # Look for other colorways
-            colorway_data = []
-            try:
-                thumb_buttons = driver.find_elements(By.XPATH, "//li[contains(@class,'colorway')]//button")
-                print(f"🎨 Found {len(thumb_buttons)} colorway variants.")
-                for i in range(len(thumb_buttons)):
-                    try:
-                        thumb_buttons = driver.find_elements(By.XPATH, "//li[contains(@class,'colorway')]//button")
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", thumb_buttons[i])
-                        thumb_buttons[i].click()
-                        time.sleep(3)
+            # Check for colorway variants (they are buttons with data-style-color)
+            variant_buttons = driver.find_elements(By.CSS_SELECTOR, "button.css-1pe4hfj[data-style-color]")
+            variant_ids = [btn.get_attribute("data-style-color") for btn in variant_buttons]
+            print(f"🎨 Found {len(variant_ids)} colorway variants.")
 
-                        style = driver.find_element(By.XPATH, "//div[contains(text(),'Style:')]").text.split("Style:")[-1].strip()
-                        price_container = driver.find_element(By.XPATH, "//div[@data-test='product-price']")
-                        price_text = price_container.text.strip().replace("\n", " ")
-                        prices = re.findall(r"\$[\d\.]+", price_text)
-                        if len(prices) == 2:
-                            variant_sale = prices[0]
-                            variant_regular = prices[1]
-                        elif len(prices) == 1:
-                            variant_sale = None
-                            variant_regular = prices[0]
-                        else:
-                            variant_sale = variant_regular = None
-
-                        discount = None
-                        if variant_sale and variant_regular:
-                            try:
-                                discount = round(100 * (1 - float(variant_sale) / float(variant_regular)))
-                            except:
-                                pass
-
-                        colorway_data.append({
-                            "style_id": style,
-                            "regular_price": variant_regular,
-                            "sale_price": variant_sale,
-                            "discount": discount,
-                        })
-                    except Exception as e:
-                        print(f"⚠️ Failed to extract variant {i+1}: {e}")
-            except:
-                print("🎨 No colorway variants found.")
+            variants = []
+            for var_id in variant_ids:
+                variant_url = f"https://www.nike.com/t/air-max-1/{var_id}"
+                try:
+                    driver.get(variant_url)
+                    time.sleep(5)
+                    var_price_info = extract_price_info(driver)
+                    variants.append({
+                        "style_id": var_id,
+                        "regular_price": var_price_info["regular"],
+                        "sale_price": var_price_info["sale"],
+                    })
+                except Exception:
+                    continue
 
             deals.append({
-                "store": "Nike",
-                "product_url": url,
                 "title": title,
-                "base_style": style_id,
-                "regular_price": regular_price,
-                "sale_price": sale_price,
-                "variants": colorway_data
+                "style_id": style_id,
+                "price_info": price_info,
+                "variants": variants,
+                "url": url
             })
 
-    finally:
-        driver.quit()
+        except Exception as e:
+            print(f"❌ Failed to process {url}: {e}")
+            traceback.print_exc()
+            continue
 
+    driver.quit()
     return deals
-
-
-if __name__ == "__main__":
-    print("📦 Fetching Nike deals...")
-    results = get_nike_deals()
-    print("\n✅ Nike scraping complete.\n")
-    print("SUMMARY RESULTS:")
-    print(f"Total unique Nike products: {len(results)}")
-    for i, prod in enumerate(results, 1):
-        print(f"{i}. {prod['title']} ({prod['base_style']})")
-        print(f"   💵 ${prod['sale_price']} → ${prod['regular_price']}" if prod['sale_price'] else f"   💵 ${prod['regular_price']}")
-        for v in prod["variants"]:
-            discount = f" ({v['discount']}% off)" if v["discount"] else ""
-            print(f"      🔹 {v['style_id']}: ${v['sale_price']} → ${v['regular_price']}{discount}")
