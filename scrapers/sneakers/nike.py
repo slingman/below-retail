@@ -1,116 +1,140 @@
+#!/usr/bin/env python3
 import time
-import re
+import traceback
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import get_driver_with_stealth
 
-
-def extract_style_id_from_url(url: str) -> str:
-    return url.split("/")[-1].split("?")[0].upper()
-
-
 def extract_price_block(driver):
+    """Extracts regular and sale prices from the price block."""
     try:
-        price_block = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//div[contains(@data-test, 'product-price')]"))
-        )
-        price_text = price_block.text.strip().replace("\n", " ")
-        prices = re.findall(r"\$[\d,.]+", price_text)
-        if len(prices) == 2:
-            return {"regular": prices[1], "sale": prices[0]}
-        elif len(prices) == 1:
-            return {"regular": prices[0], "sale": None}
-        else:
-            return {"regular": None, "sale": None}
+        price_container = driver.find_element(By.CLASS_NAME, "product-price.is--current-price.css-s56yt7")
+        spans = price_container.find_elements(By.TAG_NAME, "span")
+        prices = [s.text.strip() for s in spans if "$" in s.text]
+        if len(prices) == 1:
+            return {"regular": float(prices[0].replace("$", "")), "sale": None}
+        elif len(prices) >= 2:
+            return {
+                "regular": float(prices[1].replace("$", "")),
+                "sale": float(prices[0].replace("$", ""))
+            }
     except Exception:
         return {"regular": None, "sale": None}
 
+def extract_colorways(driver):
+    """Extracts other colorway URLs from the colorway selector section."""
+    try:
+        container = driver.find_element(By.CLASS_NAME, "colorways-list.css-1u0z2bu")
+        links = container.find_elements(By.TAG_NAME, "a")
+        color_urls = []
+        for link in links:
+            href = link.get_attribute("href")
+            if href and "/t/" in href:
+                color_urls.append(href)
+        return list(set(color_urls))
+    except Exception:
+        return []
 
 def parse_product_page(driver, url):
-    product_data = {}
+    """Extracts all info for a given product page."""
     driver.get(url)
     time.sleep(5)
 
+    # Title
     try:
         title_elem = WebDriverWait(driver, 8).until(
-            EC.presence_of_element_located((By.XPATH, "//h1"))
+            EC.presence_of_element_located((By.CLASS_NAME, "headline-5.css-zvhuxb"))
         )
-        product_data["title"] = title_elem.text.strip()
+        title = title_elem.text.strip()
     except Exception:
-        product_data["title"] = None
+        title = "N/A"
 
-    base_style = extract_style_id_from_url(url)
-    product_data["base_style"] = base_style
-
-    product_data["price"] = extract_price_block(driver)
-    product_data["variants"] = []
-
+    # Style ID
     try:
-        swatches = driver.find_elements(By.XPATH, "//div[@data-testid='colorwayPicker']//button")
-        print(f"🎨 Found {len(swatches)} colorway variants.")
-        for idx, swatch in enumerate(swatches):
-            try:
-                driver.execute_script("arguments[0].scrollIntoView(true);", swatch)
-                driver.execute_script("arguments[0].click();", swatch)
-                time.sleep(3)
-
-                style_id = extract_style_id_from_url(driver.current_url)
-                price = extract_price_block(driver)
-
-                discount = None
-                if price["sale"] and price["regular"]:
-                    try:
-                        r = float(price["regular"].replace("$", "").replace(",", ""))
-                        s = float(price["sale"].replace("$", "").replace(",", ""))
-                        discount = round((r - s) / r * 100)
-                    except Exception:
-                        pass
-
-                product_data["variants"].append({
-                    "style": style_id,
-                    "price": price,
-                    "discount_percent": discount
-                })
-
-            except Exception as e:
-                print(f"⚠️ Failed to process variant #{idx+1}: {e}")
-
+        style_elem = driver.find_element(By.XPATH, "//div[contains(text(),'Style') or contains(text(),'Product')]")
+        style_id = style_elem.text.split(":")[-1].strip()
     except Exception:
-        print("⚠️ No colorway variants found.")
-    return product_data
+        style_id = "N/A"
 
+    # Price info
+    prices = extract_price_block(driver)
+
+    return {
+        "title": title,
+        "style_id": style_id,
+        "url": url,
+        "price": prices
+    }
 
 def get_nike_deals():
-    url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
     driver = get_driver_with_stealth()
-    driver.get(url)
-    time.sleep(5)
-
-    deals = []
+    driver.get(search_url)
+    time.sleep(6)
 
     try:
-        cards = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.XPATH, "//a[contains(@href, '/t/')]"))
+        product_cards = WebDriverWait(driver, 15).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, "product-card__link-overlay"))
         )
-        product_links = []
-        for card in cards:
-            href = card.get_attribute("href")
-            if href and "/t/" in href and href not in product_links:
-                product_links.append(href)
-
-        print(f"🔎 Found {len(product_links)} products on Nike search")
-        print("Extracted product URLs:", product_links[:10])
-
-        for url in product_links[:10]:
-            print(f"\n🔄 Processing Nike product: {url}")
-            try:
-                data = parse_product_page(driver, url)
-                deals.append(data)
-            except Exception as e:
-                print(f"❌ Failed to parse Nike product: {e}")
-
-    finally:
+        product_urls = list({card.get_attribute("href") for card in product_cards if "/t/" in card.get_attribute("href")})
+        print(f"🔎 Found {len(product_urls)} products on Nike search")
+        print("Extracted product URLs:", product_urls[:10])
+    except Exception as e:
+        print("❌ Failed to extract product cards:", e)
+        traceback.print_exc()
         driver.quit()
+        return []
 
-    return deals
+    all_products = []
+
+    for idx, url in enumerate(product_urls[:10], start=1):
+        try:
+            print(f"\n🔄 Processing Nike product: {url}")
+            product_data = parse_product_page(driver, url)
+
+            # Try finding colorway variants
+            variant_urls = extract_colorways(driver)
+            variants = []
+
+            if variant_urls:
+                print(f"🎨 Found {len(variant_urls)} colorway variants.")
+                for vu in variant_urls:
+                    if vu == url:
+                        continue  # Skip base URL
+                    try:
+                        variant_data = parse_product_page(driver, vu)
+                        variants.append(variant_data)
+                    except Exception as ve:
+                        print(f"⚠️ Failed to process variant: {vu}")
+                        traceback.print_exc()
+            else:
+                print("🎨 Found 0 colorway variants.")
+
+            product_data["variants"] = variants
+            all_products.append(product_data)
+
+        except Exception as e:
+            print(f"❌ Error scraping product {url}: {e}")
+            traceback.print_exc()
+
+    driver.quit()
+    return all_products
+
+if __name__ == "__main__":
+    products = get_nike_deals()
+    print("\n✅ Nike scraping complete.")
+    print(f"\nSUMMARY RESULTS:\nTotal unique Nike products: {len(products)}")
+    for idx, p in enumerate(products, 1):
+        print(f"{idx}. {p['title']} ({p['style_id']})")
+        if p["price"]:
+            print(f"   💵 ${p['price']}")
+        if p.get("variants"):
+            for v in p["variants"]:
+                reg = v['price'].get("regular")
+                sale = v['price'].get("sale")
+                if sale:
+                    pct = round(100 * (reg - sale) / reg)
+                    print(f"     - {v['style_id']}: ${sale} → ${reg} ({pct}% off)")
+                else:
+                    print(f"     - {v['style_id']}: ${reg}")
