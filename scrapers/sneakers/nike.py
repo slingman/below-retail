@@ -1,99 +1,116 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 import time
+import re
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from utils.selenium_setup import get_driver_with_stealth
+
+BASE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+
+def get_text_safe(driver, selector, by=By.XPATH):
+    try:
+        return driver.find_element(by, selector).text.strip()
+    except Exception:
+        return None
+
+def extract_price_block(driver):
+    try:
+        regular = get_text_safe(driver, "//div[@data-test='product-price']//div[contains(@class,'is--striked-out')]")
+        sale = get_text_safe(driver, "//div[@data-test='product-price']//div[contains(@class,'is--current-price')]")
+        if not regular:  # No discount
+            regular = sale
+            sale = None
+        return {"regular": regular, "sale": sale}
+    except Exception:
+        return {"regular": None, "sale": None}
 
 def get_nike_deals():
-    url = "https://www.nike.com/w?q=air+max+1"
+    driver = get_driver_with_stealth()
+    wait = WebDriverWait(driver, 10)
+    print("📦 Fetching Nike deals...")
 
-    # Set up Selenium WebDriver
-    service = Service(ChromeDriverManager().install())
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in headless mode for efficiency
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    driver = webdriver.Chrome(service=service, options=options)
+    driver.get(BASE_SEARCH_URL)
+    time.sleep(3)
 
+    product_links = set()
     try:
-        driver.get(url)
-        time.sleep(5)  # Allow time for page to load
-
-        deals = []
-        product_cards = driver.find_elements(By.CLASS_NAME, "product-card")
-
+        product_cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__img-link-overlay")))
         for card in product_cards:
+            href = card.get_attribute("href")
+            if href:
+                product_links.add(href)
+    except Exception:
+        print("❌ Failed to find product cards")
+
+    print(f"🔎 Found {len(product_links)} products on Nike search")
+    print("Extracted product URLs:", list(product_links)[:10])
+
+    deals = []
+
+    for url in list(product_links):
+        print(f"\n🔄 Processing Nike product: {url}")
+        try:
+            driver.get(url)
+            time.sleep(2)
+
+            title = get_text_safe(driver, "//h1") or "None"
+            base_style = url.split("/")[-1].strip()
+            price_block = extract_price_block(driver)
+            print(f"📝 Product Title: {title}")
+            print(f"Base Style: {base_style}")
+            print(f"Base Price Info:  ${price_block['sale'] or price_block['regular']}")
+            
+            variant_links = set()
             try:
-                # Extract Product Name with a fallback
+                color_buttons = driver.find_elements(By.CSS_SELECTOR, "div.css-xf3ahq a")  # variant colorway buttons
+                for btn in color_buttons:
+                    href = btn.get_attribute("href")
+                    if href and "nike.com" in href:
+                        variant_links.add(href)
+            except Exception:
+                pass
+
+            print(f"🎨 Found {len(variant_links)} colorway variants.")
+
+            variant_data = []
+
+            for variant_url in variant_links:
                 try:
-                    product_name = card.find_element(By.CLASS_NAME, "product-card__title").text
-                except:
-                    product_name = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__title']").text
+                    driver.get(variant_url)
+                    time.sleep(2)
 
-                # Extract Product URL
-                try:
-                    product_url = card.find_element(By.CLASS_NAME, "product-card__link-overlay").get_attribute("href")
-                except:
-                    product_url = card.find_element(By.CSS_SELECTOR, "[data-testid='product-card__link-overlay']").get_attribute("href")
+                    variant_title = get_text_safe(driver, "//h1")
+                    style_id = variant_url.split("/")[-1].strip()
+                    variant_price = extract_price_block(driver)
+                    variant_data.append({
+                        "style_id": style_id,
+                        "title": variant_title,
+                        "price": variant_price
+                    })
 
-                # Extract Style ID from URL (last part, e.g., FZ5808-400)
-                style_id = product_url.split("/")[-1]
-                print(f"✅ Nike Style ID Extracted: {style_id}")
+                    print(f"→ Variant: {style_id} | Title: {variant_title} | Price: {variant_price}")
+                except Exception as ve:
+                    print(f"⚠️ Failed to extract variant: {variant_url} — {ve}")
 
-                # Extract Image URL
-                try:
-                    image_url = card.find_element(By.CLASS_NAME, "product-card__hero-image").get_attribute("src")
-                except:
-                    image_url = card.find_element(By.CSS_SELECTOR, "img.product-card__hero-image").get_attribute("src")
+            deals.append({
+                "title": title,
+                "style_id": base_style,
+                "price": price_block,
+                "url": url,
+                "variants": variant_data
+            })
 
-                # Extract Prices using the new data-testid attributes
-                try:
-                    sale_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='currentPrice-container']").text
-                    sale_price = sale_price_text.replace("$", "").strip()
-                except Exception as e:
-                    sale_price = None
+        except Exception as e:
+            print(f"❌ Failed to process product page: {e}")
+            continue
 
-                try:
-                    regular_price_text = card.find_element(By.CSS_SELECTOR, "span[data-testid='initialPrice-container']").text
-                    regular_price = regular_price_text.replace("$", "").strip()
-                except Exception as e:
-                    regular_price = sale_price  # If no regular price found, assume no discount
-
-                try:
-                    discount_percent = card.find_element(By.CSS_SELECTOR, "span[data-testid='OfferPercentage']").text.strip()
-                except Exception as e:
-                    discount_percent = None
-
-                # Convert price strings to floats if possible
-                try:
-                    sale_price = float(sale_price) if sale_price else None
-                    regular_price = float(regular_price) if regular_price else None
-                except:
-                    sale_price, regular_price = None, None
-
-                print(f"🟢 Nike Product Found: {product_name} | Sale Price: {sale_price} | Regular Price: {regular_price} | Style ID: {style_id}")
-
-                deals.append({
-                    "store": "Nike",
-                    "product_name": product_name,
-                    "product_url": product_url,
-                    "image_url": image_url,
-                    "sale_price": sale_price,
-                    "regular_price": regular_price,
-                    "discount_percent": discount_percent,
-                    "style_id": style_id,
-                })
-
-            except Exception as e:
-                print(f"⚠️ Skipping a product due to error: {e}")
-
-        return deals
-
-    finally:
-        driver.quit()
-
-if __name__ == "__main__":
-    deals = get_nike_deals()
-    for deal in deals:
-        print(deal)
+    driver.quit()
+    print("\n✅ Nike scraping complete.")
+    print("\nSUMMARY RESULTS:")
+    print(f"Total unique Nike products: {len(deals)}")
+    for idx, deal in enumerate(deals, start=1):
+        print(f"{idx}. {deal['title']} ({deal['style_id']})")
+        print(f"   💵 {deal['price']}")
+        for variant in deal['variants']:
+            print(f"   🎨 {variant['style_id']} — {variant['price']}")
+    return deals
