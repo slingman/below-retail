@@ -1,187 +1,123 @@
-import re
-import time
+# scrapers/sneakers/nike.py
+
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-
-
-def setup_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    return driver
-
-
-def get_style_id(driver):
-    try:
-        style_text = driver.find_element(By.CSS_SELECTOR, '[data-testid="product-description-style-color"]').text
-        return style_text.replace("Style:", "").strip()
-    except:
-        return "N/A"
-
-
-def scrape_colorway_variants(driver, wait, base_url):
-    variants = []
-
-    try:
-        wait.until(EC.presence_of_element_located((By.ID, "colorway-picker-container")))
-        colorway_container = driver.find_element(By.ID, "colorway-picker-container")
-        colorway_links = colorway_container.find_elements(By.TAG_NAME, "a")
-
-        current_style_id = get_style_id(driver)
-
-        for link in colorway_links:
-            try:
-                href = link.get_attribute("href")
-                style_id_match = re.search(r'/([A-Z0-9]{6}-\d{3})$', href)
-                if not style_id_match:
-                    continue
-
-                style_id = style_id_match.group(1)
-
-                if style_id == current_style_id:
-                    continue
-
-                driver.execute_script("window.open(arguments[0]);", href)
-                driver.switch_to.window(driver.window_handles[-1])
-
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="product_title"]'))
-                )
-
-                variant_title = driver.find_element(By.CSS_SELECTOR, '[data-testid="product_title"]').text.strip()
-                variant_style_id = get_style_id(driver)
-
-                try:
-                    sale_price = driver.find_element(By.CSS_SELECTOR, '[data-testid="currentPrice-container"]').text.strip()
-                except:
-                    sale_price = "N/A"
-
-                try:
-                    original_price = driver.find_element(By.CSS_SELECTOR, '[data-testid="initialPrice-container"]').text.strip()
-                except:
-                    original_price = sale_price
-
-                discount = "0%"
-                try:
-                    orig_val = float(original_price.replace("$", "").replace(",", ""))
-                    sale_val = float(sale_price.replace("$", "").replace(",", ""))
-                    if sale_val < orig_val:
-                        discount = f"{round((orig_val - sale_val) / orig_val * 100)}%"
-                except:
-                    pass
-
-                variants.append({
-                    "title": variant_title,
-                    "style_id": variant_style_id,
-                    "original_price": original_price,
-                    "sale_price": sale_price,
-                    "discount": discount,
-                    "url": href
-                })
-
-                driver.close()
-                driver.switch_to.window(driver.window_handles[0])
-
-            except Exception as e:
-                print(f"❌ Variant error: {e}")
-                if len(driver.window_handles) > 1:
-                    driver.close()
-                    driver.switch_to.window(driver.window_handles[0])
-                continue
-
-    except TimeoutException:
-        print("⚠️ No colorway picker found.")
-
-    return variants
-
-
-def parse_nike_product_page(driver, wait, url):
-    driver.get(url)
-
-    try:
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="product_title"]')))
-    except TimeoutException:
-        print("❌ Product page did not load.")
-        return
-
-    title = driver.find_element(By.CSS_SELECTOR, '[data-testid="product_title"]').text.strip()
-    style_id = get_style_id(driver)
-
-    try:
-        sale_price = driver.find_element(By.CSS_SELECTOR, '[data-testid="currentPrice-container"]').text.strip()
-    except:
-        sale_price = "N/A"
-
-    try:
-        original_price = driver.find_element(By.CSS_SELECTOR, '[data-testid="initialPrice-container"]').text.strip()
-    except:
-        original_price = sale_price
-
-    discount = "0%"
-    try:
-        orig_val = float(original_price.replace("$", "").replace(",", ""))
-        sale_val = float(sale_price.replace("$", "").replace(",", ""))
-        if sale_val < orig_val:
-            discount = f"{round((orig_val - sale_val) / orig_val * 100)}%"
-    except:
-        pass
-
-    print(f"\n🟩 {title}")
-    print(f"Style ID: {style_id}")
-    print(f"Price: {sale_price} (was {original_price}, {discount} off)")
-    print(f"URL: {url}")
-
-    variants = scrape_colorway_variants(driver, wait, url)
-    for v in variants:
-        print(f"  └▶ {v['style_id']} | {v['sale_price']} (was {v['original_price']}, {v['discount']} off)")
-
-    return {
-        "title": title,
-        "style_id": style_id,
-        "price": sale_price,
-        "original_price": original_price,
-        "discount": discount,
-        "url": url,
-        "variants": variants
-    }
-
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from utils.selenium_setup import get_chrome_driver
+import time
 
 def scrape_nike_air_max_1():
-    driver = setup_driver()
-    wait = WebDriverWait(driver, 10)
-    base_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
-    driver.get(base_url)
+    url = 'https://www.nike.com/w?q=air%20max%201&vst=air%20max%201'
+    driver = get_chrome_driver()
+    driver.get(url)
+    wait = WebDriverWait(driver, 15)
 
     try:
-        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a.product-card__link')))
-        product_links = driver.find_elements(By.CSS_SELECTOR, 'a.product-card__link')
-        unique_urls = list({link.get_attribute("href") for link in product_links})
-        print(f"🔎 Found {len(unique_urls)} products.\n")
-
-        all_data = []
-        for url in unique_urls:
-            data = parse_nike_product_page(driver, wait, url)
-            if data:
-                all_data.append(data)
-
-        print(f"\n✅ Total products: {len(all_data)}")
-        print(f"✅ Total variants: {sum(len(p['variants']) for p in all_data)}")
-        print(f"✅ Total on sale: {sum(1 for p in all_data if p['discount'] != '0%') + sum(1 for p in all_data for v in p['variants'] if v['discount'] != '0%')}")
-
-    finally:
+        product_cards = wait.until(EC.presence_of_all_elements_located(
+            (By.CSS_SELECTOR, 'a.product-card__link-overlay')
+        ))
+    except TimeoutException:
+        print("Timeout: Could not find product cards.")
         driver.quit()
+        return []
 
+    product_links = list({card.get_attribute('href') for card in product_cards if card.get_attribute('href')})
+    print(f"Found {len(product_links)} product links.")
 
-if __name__ == "__main__":
-    scrape_nike_air_max_1()
+    all_products = []
+
+    for link in product_links:
+        driver.get(link)
+        time.sleep(2)  # buffer for product page content to load
+
+        try:
+            title = driver.find_element(By.CSS_SELECTOR, 'h1.headline-2').text
+        except:
+            title = "N/A"
+
+        try:
+            base_style = driver.find_element(By.CSS_SELECTOR, '[data-test="product-style-color"]').text
+        except:
+            base_style = "N/A"
+
+        try:
+            price_block = driver.find_element(By.CSS_SELECTOR, '[data-test="product-price"]')
+            regular_price = price_block.find_element(By.CSS_SELECTOR, '[data-test="original-price"]').text
+            sale_price = price_block.find_element(By.CSS_SELECTOR, '[data-test="sale-price"]').text
+        except:
+            try:
+                sale_price = None
+                regular_price = driver.find_element(By.CSS_SELECTOR, '[data-test="product-price"]').text
+            except:
+                regular_price = "N/A"
+                sale_price = None
+
+        print(f"\n{title} ({base_style})")
+        print(f"  Price: {regular_price}" + (f" → {sale_price}" if sale_price else ""))
+
+        variants = []
+        try:
+            color_buttons = wait.until(EC.presence_of_all_elements_located(
+                (By.CSS_SELECTOR, '[data-test="colorway-thumbnails"] button')
+            ))
+        except TimeoutException:
+            color_buttons = []
+
+        for btn in color_buttons:
+            try:
+                driver.execute_script("arguments[0].scrollIntoView(true);", btn)
+                btn.click()
+                time.sleep(1)
+
+                style = driver.find_element(By.CSS_SELECTOR, '[data-test="product-style-color"]').text
+
+                try:
+                    price_block = driver.find_element(By.CSS_SELECTOR, '[data-test="product-price"]')
+                    regular = price_block.find_element(By.CSS_SELECTOR, '[data-test="original-price"]').text
+                    sale = price_block.find_element(By.CSS_SELECTOR, '[data-test="sale-price"]').text
+                except:
+                    try:
+                        sale = None
+                        regular = driver.find_element(By.CSS_SELECTOR, '[data-test="product-price"]').text
+                    except:
+                        regular = "N/A"
+                        sale = None
+
+                variants.append({
+                    'style_id': style,
+                    'regular_price': regular,
+                    'sale_price': sale
+                })
+
+            except StaleElementReferenceException:
+                continue
+            except:
+                continue
+
+        print(f"  Variants: {len(variants)}")
+        for v in variants:
+            line = f"    {v['style_id']} — {v['regular_price']}"
+            if v['sale_price']:
+                line += f" → {v['sale_price']}"
+            print(line)
+
+        all_products.append({
+            'title': title,
+            'base_style_id': base_style,
+            'price': regular_price,
+            'sale_price': sale_price,
+            'variants': variants
+        })
+
+    print(f"\nTotal products: {len(all_products)}")
+    total_variants = sum(len(p['variants']) for p in all_products)
+    total_on_sale = sum(
+        1 for p in all_products for v in p['variants'] if v['sale_price']
+    )
+    print(f"Total variants: {total_variants}")
+    print(f"Variants on sale: {total_on_sale}")
+
+    driver.quit()
+    return all_products
