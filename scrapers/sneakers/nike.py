@@ -2,14 +2,14 @@ import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from utils.selenium_setup import get_chrome_driver
 
 NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
 
 def scrape_nike_air_max_1():
     driver = get_chrome_driver()
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, 15)
     results = []
 
     try:
@@ -28,31 +28,29 @@ def scrape_nike_air_max_1():
         for link in product_links:
             try:
                 driver.get(link)
-                time.sleep(2)
+                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'h1.headline-2')))
 
                 # Title
                 try:
-                    title = wait.until(EC.presence_of_element_located(
-                        (By.CSS_SELECTOR, 'h1.headline-2'))).text.strip()
-                except TimeoutException:
+                    title = driver.find_element(By.CSS_SELECTOR, 'h1.headline-2').text.strip()
+                except NoSuchElementException:
                     title = "N/A"
 
                 # Style ID
                 try:
-                    style_id = driver.find_element(
-                        By.CSS_SELECTOR, '[data-test="product-style-colorway"]').text.strip()
-                except:
+                    style_id = driver.find_element(By.CSS_SELECTOR, '[data-test="product-style-colorway"]').text.strip()
+                except NoSuchElementException:
                     style_id = "N/A"
 
                 # Prices
                 try:
                     sale_price = driver.find_element(By.CSS_SELECTOR, '[data-testid="product-price-reduced"]').text.strip()
-                except:
+                except NoSuchElementException:
                     sale_price = None
 
                 try:
                     regular_price = driver.find_element(By.CSS_SELECTOR, '[data-testid="product-price"]').text.strip()
-                except:
+                except NoSuchElementException:
                     regular_price = sale_price if sale_price else "N/A"
 
                 if not sale_price:
@@ -60,8 +58,6 @@ def scrape_nike_air_max_1():
 
                 print(f"{title} ({style_id})")
                 print(f"  Price: {sale_price} (was {regular_price})")
-
-                # Optional: colorway variants (left out for now)
                 print(f"  Variants: 0\n")
 
                 results.append({
@@ -72,8 +68,8 @@ def scrape_nike_air_max_1():
                     "variants": []
                 })
 
-            except WebDriverException as e:
-                print(f"Error on {link}: {e}")
+            except Exception as e:
+                print(f"Failed to scrape {link} due to error: {e}\n")
                 continue
 
     finally:
