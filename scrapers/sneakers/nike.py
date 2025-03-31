@@ -1,118 +1,93 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import TimeoutException
 from utils.selenium_setup import get_chrome_driver
 import time
-import traceback
-
-NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
 
 def scrape_nike_air_max_1():
+    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
     driver = get_chrome_driver()
+    driver.get(search_url)
+
     wait = WebDriverWait(driver, 10)
-
-    driver.get(NIKE_SEARCH_URL)
-    time.sleep(3)
-
     product_links = []
+
+    # Wait for product cards to load and collect their hrefs
     try:
-        cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__link-overlay")))
-        for card in cards:
-            href = card.get_attribute("href")
-            if href and href.startswith("https://www.nike.com/t/"):
-                product_links.append(href)
-    except Exception as e:
-        print("Failed to load product listing page.")
-        traceback.print_exc()
-        driver.quit()
-        return []
+        product_cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__link-overlay")))
+        product_links = [card.get_attribute("href") for card in product_cards if card.get_attribute("href")]
+    except TimeoutException:
+        print("Timeout: Failed to load product cards")
 
     print(f"Found {len(product_links)} product links.\n")
 
-    all_deals = []
+    deals = []
 
-    for link in product_links:
+    for url in product_links:
         try:
-            driver.get(link)
-            time.sleep(3)
+            driver.get(url)
+            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.headline-2.css-15xq6wr")))
 
-            product = {}
-
+            title = driver.find_element(By.CSS_SELECTOR, "h1.headline-2.css-15xq6wr").text.strip()
             try:
-                title_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.headline-2.css-15k04um")))
-                product["title"] = title_elem.text
+                base_style = driver.find_element(By.CSS_SELECTOR, "div.description-preview__style-color").text.strip().split(" ")[-1]
             except:
-                product["title"] = "N/A"
+                base_style = "N/A"
 
             try:
-                style_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.description-preview__style-color")))
-                product["style_id"] = style_elem.text.strip()
+                price_elem = driver.find_element(By.CSS_SELECTOR, "div[data-test=product-price]")
+                full_price = price_elem.find_element(By.CSS_SELECTOR, "div.css-0").text.strip()
+                sale_price = price_elem.find_element(By.CSS_SELECTOR, "div[data-test=product-price-reduced]").text.strip()
             except:
-                product["style_id"] = "N/A"
+                try:
+                    sale_price = "N/A"
+                    full_price = driver.find_element(By.CSS_SELECTOR, "div[data-test=product-price]").text.strip()
+                except:
+                    full_price = "N/A"
+                    sale_price = "N/A"
 
+            variants = []
             try:
-                price_container = driver.find_element(By.CSS_SELECTOR, "div.product-price.is--current-price")
-                price = price_container.text.strip().replace("$", "")
-                product["price"] = float(price)
-            except:
-                product["price"] = "N/A"
-
-            try:
-                sale_price_elem = driver.find_element(By.CSS_SELECTOR, "div.product-price__wrapper div:nth-child(1)")
-                sale_price = sale_price_elem.text.strip().replace("$", "")
-                product["sale_price"] = float(sale_price) if sale_price else product.get("price", "N/A")
-            except:
-                product["sale_price"] = product.get("price", "N/A")
-
-            product["variants"] = []
-
-            try:
-                swatches = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "li.css-1a4fh4s button")))
+                swatches = driver.find_elements(By.CSS_SELECTOR, "li.product-variants__colorway")
                 for swatch in swatches:
                     try:
-                        driver.execute_script("arguments[0].click();", swatch)
-                        time.sleep(2)
-
-                        variant = {}
-
+                        swatch.click()
+                        time.sleep(1)  # Give it a sec to load
+                        style = driver.find_element(By.CSS_SELECTOR, "div.description-preview__style-color").text.strip().split(" ")[-1]
                         try:
-                            style_elem = driver.find_element(By.CSS_SELECTOR, "div.description-preview__style-color")
-                            variant["style_id"] = style_elem.text.strip()
+                            price_wrap = driver.find_element(By.CSS_SELECTOR, "div[data-test=product-price]")
+                            current_price = price_wrap.find_element(By.CSS_SELECTOR, "div.css-0").text.strip()
+                            reduced_price = price_wrap.find_element(By.CSS_SELECTOR, "div[data-test=product-price-reduced]").text.strip()
                         except:
-                            variant["style_id"] = "N/A"
-
-                        try:
-                            price_elem = driver.find_element(By.CSS_SELECTOR, "div.product-price.is--current-price")
-                            variant["price"] = float(price_elem.text.replace("$", ""))
-                        except:
-                            variant["price"] = "N/A"
-
-                        try:
-                            reduced_elem = driver.find_element(By.CSS_SELECTOR, "div.product-price__wrapper div:nth-child(1)")
-                            reduced_price = reduced_elem.text.strip().replace("$", "")
-                            variant["sale_price"] = float(reduced_price) if reduced_price else variant.get("price", "N/A")
-                        except:
-                            variant["sale_price"] = variant.get("price", "N/A")
-
-                        product["variants"].append(variant)
-                    except Exception as inner_e:
-                        print("Variant scrape failed.")
-                        traceback.print_exc()
-
+                            current_price = driver.find_element(By.CSS_SELECTOR, "div[data-test=product-price]").text.strip()
+                            reduced_price = "N/A"
+                        variants.append({
+                            "style_id": style,
+                            "price": current_price,
+                            "sale_price": reduced_price
+                        })
+                    except Exception as e:
+                        continue
             except:
                 pass
 
-            print(f"{product['title']} ({product['style_id']})")
-            print(f"  Price: ${product['sale_price']} (was ${product['price']})")
-            print(f"  Variants: {len(product['variants'])}\n")
+            deals.append({
+                "title": title,
+                "base_style_id": base_style,
+                "price": full_price,
+                "sale_price": sale_price,
+                "url": url,
+                "variants": variants
+            })
 
-            all_deals.append(product)
-
-        except WebDriverException:
-            print(f"Failed to scrape {link} due to error:")
-            traceback.print_exc()
+            print(f"{title} ({base_style})")
+            print(f"  Price: {sale_price if sale_price != 'N/A' else full_price}")
+            print(f"  Variants: {len(variants)}")
+            print()
+        except Exception as e:
+            print(f"Failed to scrape {url} due to error: {e}\n")
             continue
 
     driver.quit()
-    return all_deals
+    return deals
