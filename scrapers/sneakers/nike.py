@@ -1,4 +1,3 @@
-import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -6,99 +5,131 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import TimeoutException, WebDriverException
+import time
+
 
 def setup_driver():
     chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--headless=chrome")  # changed from "--headless=new"
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
+
+def extract_variant_data(driver):
+    variants = []
+    try:
+        swatches = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "li[class*='colorway'] button"))
+        )
+
+        for idx, swatch in enumerate(swatches):
+            try:
+                driver.execute_script("arguments[0].scrollIntoView(true);", swatch)
+                time.sleep(0.5)
+                swatch.click()
+                time.sleep(1.5)
+
+                title = driver.find_element(By.CSS_SELECTOR, "h1.headline-5").text.strip()
+                style_id = driver.find_element(By.CSS_SELECTOR, "div[data-test='product-style-colorway']").text.strip()
+
+                try:
+                    sale_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price-reduced']").text.strip()
+                    regular_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price-original']").text.strip()
+                except:
+                    sale_price = None
+                    try:
+                        regular_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price']").text.strip()
+                    except:
+                        regular_price = "N/A"
+
+                variants.append({
+                    "title": title,
+                    "style_id": style_id,
+                    "price": regular_price,
+                    "sale_price": sale_price,
+                })
+
+            except Exception as e:
+                print(f"Failed to extract variant at index {idx}: {e}")
+                continue
+
+    except TimeoutException:
+        print("Variant swatches not found.")
+    return variants
+
+
 def scrape_nike_air_max_1():
-    base_url = "https://www.nike.com"
-    search_url = f"{base_url}/w?q=air%20max%201&vst=air%20max%201"
-
+    base_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
     driver = setup_driver()
-    driver.get(search_url)
-    time.sleep(5)
+    driver.get(base_url)
+    time.sleep(4)
 
-    product_links = list(set([
-        a.get_attribute("href")
-        for a in driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
-    ]))
+    product_links = []
+    try:
+        cards = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__link-overlay"))
+        )
+        product_links = list(set([card.get_attribute("href") for card in cards]))
+    except:
+        print("Failed to find product cards.")
+        driver.quit()
+        return []
 
     print(f"Found {len(product_links)} product links.\n")
+    all_products = []
 
-    results = []
     for link in product_links:
         try:
             driver.get(link)
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "h1.headline-2"))
-            )
+            time.sleep(3)
 
-            product_title = driver.find_element(By.CSS_SELECTOR, "h1.headline-2").text
-            price_elements = driver.find_elements(By.CSS_SELECTOR, "div.product-price.is--current-price")
-            price_text = price_elements[0].text if price_elements else "N/A"
+            title = driver.find_element(By.CSS_SELECTOR, "h1.headline-5").text.strip()
+            base_style = driver.find_element(By.CSS_SELECTOR, "div[data-test='product-style-colorway']").text.strip()
 
             try:
-                style_id = driver.find_element(By.XPATH, "//div[contains(text(), 'Style:')]").text.split("Style:")[-1].strip()
+                sale_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price-reduced']").text.strip()
+                regular_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price-original']").text.strip()
             except:
-                style_id = "N/A"
-
-            regular_price = None
-            sale_price = None
-
-            if "Sale" in price_text or "\n" in price_text:
-                parts = price_text.split("\n")
-                if len(parts) == 2:
-                    regular_price = parts[0].replace("$", "").strip()
-                    sale_price = parts[1].replace("$", "").strip()
-            else:
-                regular_price = price_text.replace("$", "").strip()
-
-            variants = []
-            color_buttons = driver.find_elements(By.CSS_SELECTOR, "li[data-qa='colorway'] button")
-            for i in range(len(color_buttons)):
-                driver.get(link)
-                time.sleep(2)
-                color_buttons = driver.find_elements(By.CSS_SELECTOR, "li[data-qa='colorway'] button")
+                sale_price = None
                 try:
-                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable(color_buttons[i])).click()
-                    time.sleep(2)
+                    regular_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price']").text.strip()
+                except:
+                    regular_price = "N/A"
 
-                    variant_price_text = driver.find_element(By.CSS_SELECTOR, "div.product-price.is--current-price").text
-                    variant_style_id = driver.find_element(By.XPATH, "//div[contains(text(), 'Style:')]").text.split("Style:")[-1].strip()
+            variants = extract_variant_data(driver)
 
-                    if "\n" in variant_price_text:
-                        reg, sale = variant_price_text.split("\n")
-                        variant_regular_price = reg.replace("$", "").strip()
-                        variant_sale_price = sale.replace("$", "").strip()
-                    else:
-                        variant_regular_price = variant_price_text.replace("$", "").strip()
-                        variant_sale_price = None
+            print(f"Product: {title}")
+            print(f"Base Style: {base_style}")
+            print(f"Price: {regular_price}")
+            if sale_price:
+                print(f"Sale Price: {sale_price}")
+            print("Variants:")
+            for var in variants:
+                discount = ""
+                if var["sale_price"]:
+                    try:
+                        p1 = float(var["price"].replace("$", ""))
+                        p2 = float(var["sale_price"].replace("$", ""))
+                        discount = f" ({round((p1 - p2) / p1 * 100)}% off)"
+                    except:
+                        discount = ""
+                print(f"  - {var['style_id']}: {var['sale_price'] or var['price']}{discount}")
+            print()
 
-                    variants.append({
-                        "style_id": variant_style_id,
-                        "regular_price": variant_regular_price,
-                        "sale_price": variant_sale_price,
-                    })
-
-                except Exception as e:
-                    print(f"Failed to extract variant {i} on {link}: {e}")
-
-            results.append({
-                "title": product_title,
-                "url": link,
-                "style_id": style_id,
-                "regular_price": regular_price,
+            all_products.append({
+                "title": title,
+                "base_style": base_style,
+                "price": regular_price,
                 "sale_price": sale_price,
                 "variants": variants
             })
 
-        except Exception as e:
-            print(f"Failed to scrape {link} due to error: {e}\n")
+        except WebDriverException as e:
+            print(f"Failed to scrape {link} due to error: {e}")
+            continue
 
     driver.quit()
-    return results
+    return all_products
