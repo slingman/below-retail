@@ -1,91 +1,87 @@
-# scrapers/sneakers/nike.py
-
-import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from utils.selenium_setup import get_chrome_driver
 
+import time
+
 def scrape_nike_air_max_1():
-    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+    base_url = "https://www.nike.com"
+    search_url = f"{base_url}/w?q=air+max+1&vst=air+max+1"
+
     driver = get_chrome_driver()
-    driver.get(search_url)
     wait = WebDriverWait(driver, 10)
 
     print("Finding product links...")
-    product_links = []
-    cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a.product-card__link-overlay')))
-    for card in cards:
-        href = card.get_attribute('href')
-        if href and href not in product_links:
-            product_links.append(href)
+    driver.get(search_url)
+    time.sleep(2)
+
+    try:
+        product_elements = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__link-overlay")))
+        product_links = [elem.get_attribute("href") for elem in product_elements if elem.get_attribute("href")]
+    except TimeoutException:
+        print("Failed to load product elements from listing page.")
+        driver.quit()
+        return []
 
     print(f"Found {len(product_links)} product links.\n")
 
-    results = []
+    deals = []
 
     for link in product_links:
         try:
             driver.get(link)
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'h1.headline-2')))
+            time.sleep(2)
+            title = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'h1.headline-5'))).text
+            style_id = link.split("/")[-1]
 
-            base_title = driver.find_element(By.CSS_SELECTOR, 'h1.headline-2').text.strip()
-            all_variants = []
+            try:
+                current_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price-reduced']").text
+                original_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price']").text
+            except:
+                current_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price']").text
+                original_price = current_price
 
-            swatches = driver.find_elements(By.CSS_SELECTOR, '[data-testid="colorways-list"] li input[type="radio"]')
-
-            for i, swatch in enumerate(swatches):
-                try:
-                    driver.execute_script("arguments[0].click();", swatch)
-                    time.sleep(1.5)
-
-                    style = driver.find_element(By.CSS_SELECTOR, 'div.description-preview__style-color').text.strip()
-                    full_title = driver.find_element(By.CSS_SELECTOR, 'h1.headline-2').text.strip()
-
+            variants = []
+            try:
+                swatches = driver.find_elements(By.CSS_SELECTOR, "div.css-xf3ahq button")
+                for i, swatch in enumerate(swatches):
                     try:
-                        price_block = driver.find_element(By.CSS_SELECTOR, '[data-testid="product-price"]')
-                        sale_price = price_block.find_element(By.CSS_SELECTOR, '[data-testid="product-price-reduced"]').text.strip()
-                        original_price = price_block.find_element(By.CSS_SELECTOR, '[data-testid="product-price"]').text.strip()
-                    except:
-                        sale_price = None
+                        swatch.click()
+                        time.sleep(1.5)
+                        style_text = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.description-preview__style-color"))).text
+                        price_box = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price']")
+                        price = price_box.text
                         try:
-                            original_price = driver.find_element(By.CSS_SELECTOR, '[data-testid="product-price"]').text.strip()
+                            sale_price = driver.find_element(By.CSS_SELECTOR, "[data-test='product-price-reduced']").text
                         except:
-                            original_price = "N/A"
+                            sale_price = price
+                        variants.append({
+                            "style_id": style_text,
+                            "price": price,
+                            "sale_price": sale_price
+                        })
+                    except WebDriverException:
+                        continue
+            except Exception:
+                pass
 
-                    variant_data = {
-                        "style": style,
-                        "title": full_title,
-                        "price": original_price,
-                        "sale_price": sale_price,
-                    }
-                    all_variants.append(variant_data)
-
-                except Exception as e:
-                    print(f"Failed to scrape variant {i+1} for {link} due to: {e}")
-                    continue
-
-            base_style = all_variants[0]["style"] if all_variants else "N/A"
-            base_price = all_variants[0]["price"] if all_variants else "N/A"
-            base_sale = all_variants[0]["sale_price"] if all_variants else None
-
-            print(f"{base_title} ({base_style})")
-            if base_sale:
-                print(f"  Price: {base_sale} (was {base_price})")
-            else:
-                print(f"  Price: {base_price}")
-            print(f"  Variants: {len(all_variants)}\n")
-
-            results.append({
-                "title": base_title,
-                "style": base_style,
-                "price": base_price,
-                "sale_price": base_sale,
-                "variants": all_variants,
+            deals.append({
+                "title": title,
+                "style_id": style_id,
+                "price": current_price,
+                "sale_price": current_price if current_price != original_price else original_price,
+                "variants": variants
             })
+
+            print(f"{title} ({style_id})")
+            print(f"  Price: {current_price} (was {original_price})")
+            print(f"  Variants: {len(variants)}\n")
 
         except Exception as e:
             print(f"Failed to scrape {link} due to error: {e}\n")
+            continue
 
     driver.quit()
-    return results
+    return deals
