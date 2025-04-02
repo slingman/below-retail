@@ -1,57 +1,71 @@
 # scrapers/sneakers/nike.py
 
 import time
+import re
+import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import create_webdriver
 
-
 def scrape_nike_air_max_1():
-    print("Finding Nike Air Max 1 deals...\n")
+    base_url = "https://www.nike.com"
+    search_url = f"{base_url}/w?q=air+max+1&vst=air%20max%201"
 
-    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
     driver = create_webdriver()
     driver.get(search_url)
-    time.sleep(3)
+    time.sleep(2)
 
+    print("Finding product links...")
     product_links = set()
-    elements = driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
-    for el in elements:
-        href = el.get_attribute("href")
-        if href:
-            product_links.add(href)
+
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__link-overlay"))
+        )
+        links = driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
+        for link in links:
+            href = link.get_attribute("href")
+            if href and "air-max-1" in href.lower():  # <--- filter only Air Max 1s
+                product_links.add(href)
+    except Exception as e:
+        print("Failed to extract product links:", e)
+        driver.quit()
+        return []
 
     print(f"Found {len(product_links)} product links.\n")
+
+    results = []
 
     for link in product_links:
         try:
             driver.get(link)
+            time.sleep(2)
+
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "h1.headline-2"))
             )
 
-            title = driver.find_element(By.CSS_SELECTOR, "h1.headline-2").text
-
-            # New selector for style ID — double check in browser dev tools if it breaks again
-            style_id_el = driver.find_element(By.XPATH, "//div[contains(text(),'Style:')]/following-sibling::div")
-            style_id = style_id_el.text.strip()
-
+            title = driver.find_element(By.CSS_SELECTOR, "h1.headline-2").text.strip()
+            style_id = driver.find_element(By.CSS_SELECTOR, ".description-preview__style-color").text.strip()
             try:
-                sale_price = driver.find_element(By.CSS_SELECTOR, "div[data-test=product-price-reduced]").text
-                full_price = driver.find_element(By.CSS_SELECTOR, "div[data-test=product-price]").text
+                sale_price = driver.find_element(By.CSS_SELECTOR, ".product-price--is-sale").text.strip()
+                full_price = driver.find_element(By.CSS_SELECTOR, ".product-price.us__styling").text.strip()
             except:
-                full_price = driver.find_element(By.CSS_SELECTOR, "div[data-test=product-price]").text
+                full_price = driver.find_element(By.CSS_SELECTOR, ".product-price").text.strip()
                 sale_price = None
 
-            print(f"🟢 {title}")
-            print(f"    Style ID: {style_id}")
-            print(f"    Price: {sale_price or full_price}")
-            if sale_price:
-                print(f"    Original Price: {full_price}")
-            print(f"    URL: {link}\n")
+            results.append({
+                "title": title,
+                "style_id": style_id,
+                "price": sale_price if sale_price else full_price,
+                "sale_price": sale_price,
+                "url": link
+            })
 
         except Exception as e:
-            print(f"Failed to scrape {link} due to error: {e}\n")
+            print(f"Failed to scrape {link} due to error:", e)
+            continue
 
     driver.quit()
+    return results
