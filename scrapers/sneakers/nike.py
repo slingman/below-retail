@@ -5,13 +5,13 @@ def scrape_nike_air_max_1():
     print("Querying Nike API for Air Max 1 deals...")
 
     url = "https://api.nike.com/product_feed/threads/v2"
-    params = {
-        "filter": "marketplace(US)",
-        "filter": "language(en)",
-        "filter": "searchTerms(air max 1)",
-        "anchor": 0,
-        "count": 100,
-    }
+    params = [
+        ("filter", "marketplace(US)"),
+        ("filter", "language(en)"),
+        ("filter", "searchTerms(air max 1)"),
+        ("anchor", 0),
+        ("count", 100),
+    ]
 
     headers = {
         "User-Agent": (
