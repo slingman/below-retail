@@ -4,14 +4,15 @@ import requests
 def scrape_nike_air_max_1():
     print("Querying Nike API for Air Max 1 deals...")
 
-    url = "https://api.nike.com/product_feed/threads/v2"
-    params = [
-        ("filter", "marketplace(US)"),
-        ("filter", "language(en)"),
-        ("filter", "searchTerms(air max 1)"),
-        ("anchor", 0),
-        ("count", 100),
-    ]
+    base_url = "https://api.nike.com/product_feed/threads/v2"
+    query_string = (
+        "filter=marketplace(US)&"
+        "filter=language(en)&"
+        "filter=searchTerms(air max 1)&"
+        "anchor=0&count=100"
+    )
+
+    url = f"{base_url}?{query_string}"
 
     headers = {
         "User-Agent": (
@@ -19,14 +20,14 @@ def scrape_nike_air_max_1():
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/122.0.0.0 Safari/537.36"
         ),
-        "Accept-Language": "en-US,en;q=0.9",
         "Accept": "application/json",
+        "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://www.nike.com/",
         "Origin": "https://www.nike.com",
     }
 
     try:
-        response = requests.get(url, params=params, headers=headers)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         data = response.json()
 
