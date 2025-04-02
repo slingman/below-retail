@@ -1,4 +1,4 @@
-from nike import scrape_nike_air_max_1
+from scrapers.sneakers.nike import scrape_nike_air_max_1
 
 def main():
     print("Finding Nike Air Max 1 deals...\n")
