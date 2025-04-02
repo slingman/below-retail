@@ -22,7 +22,7 @@ def scrape_nike_air_max_1():
         )
         links = driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
         for link in links:
-            href = link.getAttribute("href")
+            href = link.get_attribute("href")
             if href and "air-max-1" in href.lower():
                 product_links.add(href)
     except Exception as e:
