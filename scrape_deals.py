@@ -1,19 +1,24 @@
-from scrapers.sneakers.nike import scrape_nike_air_max_1
+from nike import scrape_nike_air_max_1
 
-print("Finding Nike Air Max 1 deals...\n")
+def main():
+    print("Finding Nike Air Max 1 deals...\n")
 
-nike_products = scrape_nike_air_max_1()
+    deals = scrape_nike_air_max_1()
+    if not deals:
+        print("No deals found.")
+        return
 
-if not nike_products:
-    print("No deals found.")
-else:
-    print(f"\nFound {len(nike_products)} products:\n")
+    print("\nNike Air Max 1 Deals:\n")
+    for deal in deals:
+        print(f"- {deal['title']} ({deal['style_color']})")
+        print(f"  Price: ${deal['price']} (was ${deal['full_price']})" if deal['discount'] else f"  Price: ${deal['price']}")
+        if deal['discount']:
+            print(f"  🔥 {deal['discount']}% OFF!")
+        print(f"  URL: {deal['url']}\n")
 
-    for product in nike_products:
-        print(f"- {product['title']} ({product['style_id']})")
-        print(f"  Price: ${product['sale_price']:.2f}", end="")
-        if product["discount"]:
-            print(f" (was ${product['full_price']:.2f}, {product['discount']}% off)")
-        else:
-            print()
-        print(f"  Link: {product['url']}\n")
+    print("Summary:")
+    print(f"  Total products found: {len(deals)}")
+    print(f"  On sale: {sum(1 for d in deals if d['discount'])}")
+
+if __name__ == "__main__":
+    main()
