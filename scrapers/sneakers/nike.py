@@ -1,55 +1,62 @@
 import requests
 
+
 def scrape_nike_air_max_1():
     print("Querying Nike API for Air Max 1 deals...")
 
     url = "https://api.nike.com/product_feed/threads/v2"
     params = {
-        "filter": [
-            "marketplace(US)",
-            "language(en)",
-            "searchTerms(air max 1)"
-        ],
+        "filter": "marketplace(US)",
+        "filter": "language(en)",
+        "filter": "searchTerms(air max 1)",
         "anchor": 0,
-        "count": 100
+        "count": 100,
+    }
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "application/json",
+        "Referer": "https://www.nike.com/",
+        "Origin": "https://www.nike.com",
     }
 
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, headers=headers)
         response.raise_for_status()
         data = response.json()
-        threads = data.get("objects", [])
 
-        if not threads:
-            print("No products returned from Nike API.")
+        products = data.get("objects", [])
+        if not products:
+            print("No products found.")
             return []
 
-        results = []
-        for product in threads:
-            product_info = product.get("publishedContent", {}).get("properties", {})
-            title = product_info.get("title", "N/A")
-            style_color = product_info.get("styleColor", "N/A")
-            price_info = product.get("productInfo", [{}])[0].get("merchPrice", {})
-            full_price = price_info.get("fullPrice")
-            current_price = price_info.get("currentPrice")
-            discount = None
-            if full_price and current_price and current_price < full_price:
+        print(f"Found {len(products)} products.")
+        deals = []
+        for product in products:
+            info = product.get("productInfo", [{}])[0]
+            title = info.get("productContent", {}).get("fullTitle", "N/A")
+            price_data = info.get("merchPrice", {})
+            full_price = price_data.get("fullPrice")
+            current_price = price_data.get("currentPrice")
+            style_color = info.get("merchProduct", {}).get("styleColor", "N/A")
+
+            if current_price is not None and full_price is not None and current_price < full_price:
                 discount = round((full_price - current_price) / full_price * 100)
+                deals.append({
+                    "title": title,
+                    "style": style_color,
+                    "price": current_price,
+                    "original_price": full_price,
+                    "discount": discount,
+                })
 
-            url_path = product.get("publishedContent", {}).get("properties", {}).get("seo", {}).get("slug", "")
-            product_url = f"https://www.nike.com/t/{url_path}/{style_color}"
+        return deals
 
-            results.append({
-                "title": title,
-                "style_id": style_color,
-                "url": product_url,
-                "full_price": full_price,
-                "current_price": current_price,
-                "discount_percent": discount
-            })
-
-        return results
-
-    except requests.RequestException as e:
+    except requests.exceptions.RequestException as e:
         print(f"Failed to query Nike API: {e}")
         return []
