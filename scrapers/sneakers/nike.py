@@ -5,51 +5,55 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from utils.selenium_setup import create_webdriver
 
+NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+
 def scrape_nike_air_max_1():
-    base_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
-    driver = create_webdriver(headless=False)
+    driver = create_webdriver(headless=False)  # Open browser window for debugging
 
     try:
         print("Finding product links...")
-        driver.get(base_url)
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__link-overlay"))
-        )
-        links = driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
-        product_links = list(set([link.get_attribute("href") for link in links if link.get_attribute("href")]))
-        print(f"Found {len(product_links)} product links.\n")
+        driver.get(NIKE_SEARCH_URL)
+        time.sleep(3)  # Give time for page content to load
 
-        results = []
-        for url in product_links:
+        product_links = []
+        cards = driver.find_elements(By.CSS_SELECTOR, 'a.product-card__link-overlay')
+        for card in cards:
+            href = card.get_attribute('href')
+            if href and href.startswith("https://www.nike.com/t/air-max-1"):
+                product_links.append(href)
+
+        print(f"Found {len(product_links)} product links.")
+
+        deals = []
+        for idx, link in enumerate(product_links[:5]):  # TEMP LIMIT: Only process first 5 for stability
             try:
-                driver.get(url)
-                WebDriverWait(driver, 8).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "description-preview__style-color"))
-                )
+                print(f"\nScraping product {idx + 1}: {link}")
+                driver.get(link)
+                time.sleep(2)
 
-                title = driver.find_element(By.CLASS_NAME, "headline-2.css-15gyvwk").text
-                style_id = driver.find_element(By.CLASS_NAME, "description-preview__style-color").text
-                price_els = driver.find_elements(By.CLASS_NAME, "product-price")
-                price = None
-                sale_price = None
+                title = driver.find_element(By.CSS_SELECTOR, "h1.headline-2").text
+                try:
+                    style = driver.find_element(By.CSS_SELECTOR, ".description-preview__style-color").text
+                except:
+                    style = "N/A"
 
-                if len(price_els) == 1:
-                    price = price_els[0].text.replace("$", "").strip()
-                elif len(price_els) >= 2:
-                    price = price_els[0].text.replace("$", "").strip()
-                    sale_price = price_els[1].text.replace("$", "").strip()
+                try:
+                    price = driver.find_element(By.CSS_SELECTOR, "div[data-test='product-price']").text
+                except:
+                    price = "N/A"
 
-                results.append({
+                print(f"✓ {title} | {style} | {price}")
+                deals.append({
                     "title": title,
-                    "style_id": style_id,
+                    "style_id": style,
                     "price": price,
-                    "sale_price": sale_price
+                    "url": link
                 })
-
+                time.sleep(2)  # short pause between requests
             except Exception as e:
-                print(f"Failed to scrape {url} due to error: {e}")
+                print(f"Failed to scrape {link} due to error: {type(e).__name__}: {e}")
+                continue
 
-        return results
-
+        return deals
     finally:
         driver.quit()
