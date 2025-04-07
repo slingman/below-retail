@@ -1,59 +1,121 @@
+# scrapers/sneakers/nike.py
+
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
 from utils.selenium_setup import create_webdriver
 
-NIKE_SEARCH_URL = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
 
 def scrape_nike_air_max_1():
-    driver = create_webdriver(headless=False)  # Open browser window for debugging
+    search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
+    driver = create_webdriver(headless=False)  # Keep browser visible for debugging
+    deals = []
 
     try:
         print("Finding product links...")
-        driver.get(NIKE_SEARCH_URL)
-        time.sleep(3)  # Give time for page content to load
+        driver.get(search_url)
+        WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.product-card__link-overlay")))
+        product_links = driver.find_elements(By.CSS_SELECTOR, "a.product-card__link-overlay")
+        product_urls = list({link.get_attribute("href") for link in product_links})
+        print(f"Found {len(product_urls)} product links.\n")
 
-        product_links = []
-        cards = driver.find_elements(By.CSS_SELECTOR, 'a.product-card__link-overlay')
-        for card in cards:
-            href = card.get_attribute('href')
-            if href and href.startswith("https://www.nike.com/t/air-max-1"):
-                product_links.append(href)
-
-        print(f"Found {len(product_links)} product links.")
-
-        deals = []
-        for idx, link in enumerate(product_links[:5]):  # TEMP LIMIT: Only process first 5 for stability
+        for idx, url in enumerate(product_urls):
+            print(f"Scraping product {idx + 1}: {url}")
             try:
-                print(f"\nScraping product {idx + 1}: {link}")
-                driver.get(link)
-                time.sleep(2)
+                driver.get(url)
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.headline-2")))
+                time.sleep(1.5)  # Buffer for JS to render
 
-                title = driver.find_element(By.CSS_SELECTOR, "h1.headline-2").text
+                product_title = driver.find_element(By.CSS_SELECTOR, "h1.headline-2").text.strip()
                 try:
-                    style = driver.find_element(By.CSS_SELECTOR, ".description-preview__style-color").text
+                    base_style = driver.find_element(By.CSS_SELECTOR, ".description-preview__style-color").text.strip()
                 except:
-                    style = "N/A"
+                    base_style = "N/A"
 
                 try:
-                    price = driver.find_element(By.CSS_SELECTOR, "div[data-test='product-price']").text
+                    price_elem = driver.find_element(By.CSS_SELECTOR, "div[data-test='product-price']")
+                    price_text = price_elem.text.strip()
+                    if "\n" in price_text:
+                        original, sale = price_text.split("\n")
+                    else:
+                        original = price_text
+                        sale = None
                 except:
-                    price = "N/A"
+                    original = sale = None
 
-                print(f"✓ {title} | {style} | {price}")
-                deals.append({
-                    "title": title,
-                    "style_id": style,
-                    "price": price,
-                    "url": link
-                })
-                time.sleep(2)  # short pause between requests
+                base_product = {
+                    "title": product_title,
+                    "url": url,
+                    "style_id": base_style,
+                    "price": sale if sale else original,
+                    "original_price": original,
+                    "sale_price": sale,
+                    "variants": []
+                }
+
+                # Scrape swatch picker for variants
+                variant_links = []
+                try:
+                    swatches = driver.find_elements(By.CSS_SELECTOR, "div.css-1ehqh5q a")
+                    for swatch in swatches:
+                        href = swatch.get_attribute("href")
+                        if href and href not in variant_links:
+                            variant_links.append(href)
+                except Exception as e:
+                    print(f"Failed to collect swatch variants: {e}")
+
+                for vlink in variant_links:
+                    try:
+                        driver.get(vlink)
+                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.headline-2")))
+                        time.sleep(1.5)
+                        style = driver.find_element(By.CSS_SELECTOR, ".description-preview__style-color").text.strip()
+
+                        try:
+                            price_elem = driver.find_element(By.CSS_SELECTOR, "div[data-test='product-price']")
+                            price_text = price_elem.text.strip()
+                            if "\n" in price_text:
+                                v_original, v_sale = price_text.split("\n")
+                            else:
+                                v_original = price_text
+                                v_sale = None
+                        except:
+                            v_original = v_sale = None
+
+                        variant = {
+                            "style_id": style,
+                            "price": v_sale if v_sale else v_original,
+                            "original_price": v_original,
+                            "sale_price": v_sale,
+                            "url": vlink,
+                        }
+
+                        if v_sale:
+                            variant["discount_percent"] = round(
+                                (1 - float(v_sale.replace("$", "")) / float(v_original.replace("$", ""))) * 100, 1
+                            )
+                        base_product["variants"].append(variant)
+                    except Exception as e:
+                        print(f"  Failed to scrape variant {vlink} due to error: {e}")
+
+                deals.append(base_product)
+                time.sleep(1)
             except Exception as e:
-                print(f"Failed to scrape {link} due to error: {type(e).__name__}: {e}")
-                continue
+                print(f"Failed to scrape {url} due to error: {e}\n")
 
-        return deals
     finally:
         driver.quit()
+
+    # Print summary
+    print("\nFinal Nike Air Max 1 Deals:\n")
+    for product in deals:
+        print(f"{product['title']} ({product['style_id']}) - {product['price']}")
+        for variant in product["variants"]:
+            print(f"  Variant {variant['style_id']} - {variant['price']} ({variant.get('discount_percent', 0)}% off)")
+        print("")
+
+    print("Summary:")
+    print(f"  Total unique products: {len(deals)}")
+    print(f"  Variants on sale: {sum(len([v for v in p['variants'] if v['sale_price']]) for p in deals)}")
+    return deals
