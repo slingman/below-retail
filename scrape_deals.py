@@ -10,13 +10,19 @@ def main():
 
     print("\nFinal Nike Air Max 1 Deals:\n")
     for deal in deals:
-        print(f"{deal['title']} ({deal['style']})")
-        print(f"  Current Price: {deal['price']}")
-        if deal.get('original_price') and deal['original_price'] != deal['price']:
+        title = deal.get('title', 'Unknown Title')
+        style = deal.get('style', 'Unknown Style')
+        price = deal.get('price', 'N/A')
+
+        print(f"{title} ({style})")
+        print(f"  Current Price: {price}")
+        
+        if deal.get('original_price') and deal['original_price'] != price:
             print(f"  Original Price: {deal['original_price']}")
         if deal.get('discount_percent'):
             print(f"  Discount: {deal['discount_percent']} off")
-        print(f"  URL: {deal['url']}\n")
+        
+        print(f"  URL: {deal.get('url', 'N/A')}\n")
 
     print("Summary:")
     print(f"  Total unique products: {len(deals)}")
