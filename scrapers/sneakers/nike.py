@@ -1,82 +1,70 @@
 # scrapers/sneakers/nike.py
 
-import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utils.selenium_setup import create_webdriver
+import time
 
 def scrape_nike_air_max_1():
-    deals = []
-    base_url = "https://www.nike.com"
     search_url = "https://www.nike.com/w?q=air%20max%201&vst=air%20max%201"
-
     driver = create_webdriver()
     driver.get(search_url)
 
-    try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "product-card__link-overlay"))
-        )
-    except Exception as e:
-        print(f"❌ Could not load search results: {e}")
-        driver.quit()
-        return deals
-
+    wait = WebDriverWait(driver, 10)
+    print("Finding product links...")
     product_links = list({
-        link.get_attribute("href")
-        for link in driver.find_elements(By.CLASS_NAME, "product-card__link-overlay")
+        a.get_attribute("href") for a in wait.until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a.product-card__link-overlay'))
+        )
     })
-
     print(f"Found {len(product_links)} product links.\n")
+
+    results = []
 
     for idx, link in enumerate(product_links, 1):
         print(f"Scraping product {idx}: {link}")
         try:
-            if "air-max-1" not in link.lower():
-                continue
-
             driver.get(link)
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "pdp_product_title"))
-            )
+            time.sleep(2)
 
-            title = driver.find_element(By.ID, "pdp_product_title").text.strip()
-            price_container = driver.find_element(By.ID, "price-container")
-
-            try:
-                current_price = price_container.find_element(By.CSS_SELECTOR, '[data-testid="currentPrice-container"]').text
-                current_price = float(current_price.replace("$", ""))
-            except:
-                current_price = None
+            title = driver.find_element(By.CSS_SELECTOR, 'h1#pdp_product_title').text
+            price_el = driver.find_element(By.CSS_SELECTOR, '[data-testid="currentPrice-container"]')
+            current_price = price_el.text.strip()
 
             try:
-                original_price = price_container.find_element(By.CSS_SELECTOR, '[data-testid="initialPrice-container"]').text
-                original_price = float(original_price.replace("$", ""))
+                original_price_el = driver.find_element(By.CSS_SELECTOR, '[data-testid="initialPrice-container"]')
+                original_price = original_price_el.text.strip()
             except:
                 original_price = current_price
 
             try:
-                style_line = driver.find_element(By.XPATH, '//li[@data-testid="product-description-style-color"]').text
-                style_id = style_line.split("Style:")[-1].strip()
+                style_info = driver.find_element(By.XPATH, '//li[contains(text(),"Style:")]').text
+                style_code = style_info.split("Style:")[-1].strip()
             except:
-                style_id = "N/A"
+                style_code = "Unknown Style"
 
-            discount_pct = 0
-            if original_price and current_price and original_price > current_price:
-                discount_pct = round((original_price - current_price) / original_price * 100)
+            discount = ""
+            try:
+                if original_price != current_price:
+                    original = float(original_price.replace("$", ""))
+                    current = float(current_price.replace("$", ""))
+                    discount_pct = round((original - current) / original * 100)
+                    discount = f"{discount_pct}% off"
+            except:
+                pass
 
-            deals.append({
+            results.append({
                 "title": title,
-                "style_id": style_id,
-                "current_price": current_price,
+                "style": style_code,
+                "price": current_price,
                 "original_price": original_price,
-                "discount_pct": discount_pct,
-                "url": link
+                "discount": discount,
+                "url": link,
             })
 
         except Exception as e:
             print(f"❌ Failed to scrape {link} due to error: {e}\n")
 
     driver.quit()
-    return deals
+    return results
