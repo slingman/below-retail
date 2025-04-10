@@ -12,7 +12,7 @@ def main():
         print(f"  Current Price: {deal['price']}")
         print(f"  Original Price: {deal['original_price']}")
         if deal['discount']:
-            print(f"  Discount: {deal['discount']}")
+            print(f"  Discount: {deal['discount']}%")
         print(f"  URL: {deal['url']}\n")
 
     print("Summary:")
